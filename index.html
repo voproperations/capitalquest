@@ -657,6 +657,8 @@ const quizDeck = [...states];
 let quizIndex = 0;
 let quizCorrect = 0;
 let quizAnswered = false;
+let quizFirstTry = 0;
+let triedWrongCapital = false;
 
 function flashcardSubtitle() {
   return quizPanel.hidden
@@ -670,18 +672,26 @@ function stopNarration() {
   narrationStatus.textContent = '';
 }
 
+function quizResult() {
+  const percent = Math.round(100 * quizFirstTry / quizDeck.length);
+  return percent >= 80
+    ? {percent, title:'Great Job!', clip:'great-job'}
+    : {percent, title:'Keep Practicing — You Can Do It!', clip:'keep-practicing'};
+}
+
 async function playQuestion() {
   stopNarration();
-  if (!narrated || quizIndex === quizDeck.length) return;
+  if (!narrated) return;
   const attempt = narrationAttempt;
-  narration.src = 'audio/quiz/' + quizDeck[quizIndex].code.toLowerCase() + '.mp3';
+  const clip = quizIndex === quizDeck.length ? quizResult().clip : quizDeck[quizIndex].code.toLowerCase();
+  narration.src = 'audio/quiz/' + clip + '.mp3';
   try {
     await narration.play();
   } catch (error) {
     if (attempt !== narrationAttempt) return;
     narrationStatus.textContent = error.name === 'NotAllowedError'
-      ? 'Select Replay question to hear the prompt.'
-      : 'Audio is unavailable for this question.';
+      ? 'Select Replay to hear the audio.'
+      : 'Audio is unavailable.';
   }
 }
 
@@ -693,7 +703,7 @@ function chooseFlashcardMode(mode) {
   narratedMode.setAttribute('aria-pressed', String(narrated));
   byId('study-panel').hidden = isQuiz;
   quizPanel.hidden = !isQuiz;
-  narrationControls.hidden = !narrated || quizIndex === quizDeck.length;
+  narrationControls.hidden = !narrated;
   byId('subtitle').textContent = flashcardSubtitle();
   playQuestion();
 }
@@ -705,16 +715,19 @@ function setQuizFeedback(message, kind = '') {
 
 function showQuestion() {
   quizAnswered = false;
+  triedWrongCapital = false;
   const finished = quizIndex === quizDeck.length;
   const question = byId('quiz-prompt');
   question.firstElementChild.textContent = finished ? 'Quiz complete' : 'What is the capital of';
-  byId('quiz-state').textContent = finished ? 'All 50 correct!' : quizDeck[quizIndex].name;
+  const result = finished ? quizResult() : null;
+  byId('quiz-state').textContent = finished ? result.title : quizDeck[quizIndex].name;
   question.dataset.revealed = String(finished);
   byId('quiz-score').textContent = quizCorrect + ' / ' + quizDeck.length + ' correct';
-  setQuizFeedback(finished ? 'Great work! You found every state capital.' :
+  setQuizFeedback(finished ? result.percent + '% correct on the first try (' + quizFirstTry + ' / ' + quizDeck.length + ').' :
     'Choose the capital of ' + quizDeck[quizIndex].name + '.', finished ? 'complete' : '');
   nextQuestion.hidden = true;
-  narrationControls.hidden = !narrated || finished;
+  narrationControls.hidden = !narrated;
+  byId('replay-question').textContent = finished ? 'Replay result' : 'Replay question';
   playQuestion();
   quizBank.hidden = finished;
   quizBank.scrollTop = 0;
@@ -725,6 +738,7 @@ function resetQuiz() {
   shuffle(quizDeck);
   quizIndex = 0;
   quizCorrect = 0;
+  quizFirstTry = 0;
   quizBank.replaceChildren();
   for (const state of capitals) {
     const button = document.createElement('button');
@@ -750,12 +764,14 @@ quizBank.addEventListener('click', event => {
   const state = quizDeck[quizIndex];
   quizBank.querySelector('.quiz-wrong')?.classList.remove('quiz-wrong');
   if (button.dataset.answer !== state.code) {
+    triedWrongCapital = true;
     button.classList.add('quiz-wrong');
     setQuizFeedback('Try again. ' + button.textContent + ' isn’t the capital of ' + state.name + '.', 'wrong');
     return;
   }
   quizAnswered = true;
   quizCorrect++;
+  if (!triedWrongCapital) quizFirstTry++;
   byId('quiz-score').textContent = quizCorrect + ' / ' + quizDeck.length + ' correct';
   button.remove();
   if (quizCorrect === quizDeck.length) {
