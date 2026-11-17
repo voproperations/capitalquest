@@ -77,13 +77,15 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid #615473;backgro
 .mode{min-height:44px;padding:7px 16px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted);font-weight:750}
 .mode:hover{background:#493a60;color:var(--ink)}
 .mode[aria-selected=true]{background:#6746b6;border-color:#b699ed;color:white}
-.flashcard-modes{max-width:720px;margin:0 auto 14px;display:flex;gap:8px}
+.flashcard-modes{max-width:720px;margin:0 auto 14px;display:flex;flex-wrap:wrap;gap:8px}
 .flashcard-modes button[aria-pressed=true]{background:#6746b6;border-color:#b699ed;color:white}
 .quiz-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
 .quiz-tools .feedback{flex:1;min-width:135px;margin:0}
 .quiz-choice{padding-inline:10px}
 .quiz-choice:disabled{cursor:default}
 .chip.quiz-wrong{background:#583a39;border-color:#af7667;color:#ffdaca}
+.narration-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px}
+.narration-status{font-size:.85rem;color:var(--muted)}
 .quiz-prompt{cursor:default}
 .quiz-prompt:hover{background:#463664}
 .cards-panel{max-width:720px;margin:0 auto}
@@ -147,6 +149,7 @@ footer a{color:inherit}
     <div class="flashcard-modes" role="group" aria-label="Flashcard activity">
       <button type="button" id="study-mode" class="restart" aria-pressed="true" aria-controls="study-panel">Study</button>
       <button type="button" id="quiz-mode" class="restart" aria-pressed="false" aria-controls="quiz-panel">Quiz</button>
+      <button type="button" id="narrated-mode" class="restart" aria-pressed="false" aria-controls="quiz-panel">Narrated Quiz</button>
     </div>
     <section class="panel cards-panel" id="study-panel" aria-label="Study flashcards">
       <div class="panel-heading">
@@ -175,6 +178,10 @@ footer a{color:inherit}
         <div class="card quiz-prompt" id="quiz-prompt" role="status" aria-atomic="true">
           <span class="card-type">What is the capital of</span>
           <strong class="card-answer" id="quiz-state"></strong>
+        </div>
+        <div id="narration-controls" class="narration-controls" hidden>
+          <button type="button" class="restart" id="replay-question">Replay question</button>
+          <span class="narration-status" id="narration-status" role="status"></span>
         </div>
       </section>
       <section class="panel bank-panel" aria-labelledby="quiz-bank-heading">
@@ -577,6 +584,7 @@ function chooseMode(tab) {
   }
   const isMatching = tab === modeTabs[0];
   byId('restart').hidden = !isMatching;
+  if (isMatching) stopNarration();
   byId('subtitle').textContent = isMatching
     ? 'Match each capital to its U.S. state.'
     : flashcardSubtitle();
@@ -634,6 +642,13 @@ byId('shuffle-cards').addEventListener('click', () => {
 });
 const studyMode = byId('study-mode');
 const quizMode = byId('quiz-mode');
+const narratedMode = byId('narrated-mode');
+const narrationControls = byId('narration-controls');
+const narrationStatus = byId('narration-status');
+const narration = new Audio();
+narration.preload = 'none';
+let narrated = false;
+let narrationAttempt = 0;
 const quizPanel = byId('quiz-panel');
 const quizBank = byId('quiz-bank');
 const quizFeedback = byId('quiz-feedback');
@@ -649,12 +664,38 @@ function flashcardSubtitle() {
     : 'Pick the capital for the state shown on the card.';
 }
 
-function chooseFlashcardMode(isQuiz) {
+function stopNarration() {
+  narrationAttempt++;
+  narration.pause();
+  narrationStatus.textContent = '';
+}
+
+async function playQuestion() {
+  stopNarration();
+  if (!narrated || quizIndex === quizDeck.length) return;
+  const attempt = narrationAttempt;
+  narration.src = 'audio/quiz/' + quizDeck[quizIndex].code.toLowerCase() + '.mp3';
+  try {
+    await narration.play();
+  } catch (error) {
+    if (attempt !== narrationAttempt) return;
+    narrationStatus.textContent = error.name === 'NotAllowedError'
+      ? 'Select Replay question to hear the prompt.'
+      : 'Audio is unavailable for this question.';
+  }
+}
+
+function chooseFlashcardMode(mode) {
+  const isQuiz = mode !== 'study';
+  narrated = mode === 'narrated';
   studyMode.setAttribute('aria-pressed', String(!isQuiz));
-  quizMode.setAttribute('aria-pressed', String(isQuiz));
+  quizMode.setAttribute('aria-pressed', String(mode === 'quiz'));
+  narratedMode.setAttribute('aria-pressed', String(narrated));
   byId('study-panel').hidden = isQuiz;
   quizPanel.hidden = !isQuiz;
+  narrationControls.hidden = !narrated || quizIndex === quizDeck.length;
   byId('subtitle').textContent = flashcardSubtitle();
+  playQuestion();
 }
 
 function setQuizFeedback(message, kind = '') {
@@ -673,6 +714,8 @@ function showQuestion() {
   setQuizFeedback(finished ? 'Great work! You found every state capital.' :
     'Choose the capital of ' + quizDeck[quizIndex].name + '.', finished ? 'complete' : '');
   nextQuestion.hidden = true;
+  narrationControls.hidden = !narrated || finished;
+  playQuestion();
   quizBank.hidden = finished;
   quizBank.scrollTop = 0;
   for (const button of quizBank.children) button.disabled = false;
@@ -694,8 +737,10 @@ function resetQuiz() {
   showQuestion();
 }
 
-studyMode.addEventListener('click', () => chooseFlashcardMode(false));
-quizMode.addEventListener('click', () => chooseFlashcardMode(true));
+studyMode.addEventListener('click', () => chooseFlashcardMode('study'));
+quizMode.addEventListener('click', () => chooseFlashcardMode('quiz'));
+narratedMode.addEventListener('click', () => chooseFlashcardMode('narrated'));
+byId('replay-question').addEventListener('click', playQuestion);
 byId('restart-quiz').addEventListener('click', () => {
   if (!quizCorrect || quizCorrect === quizDeck.length || confirm('Restart the flashcard quiz?')) resetQuiz();
 });
