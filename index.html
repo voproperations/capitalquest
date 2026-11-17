@@ -48,6 +48,7 @@ h1{font-size:clamp(2rem,5vw,3.55rem);line-height:1.05;letter-spacing:-.065em}
 .progress::-moz-progress-bar{background:#c6f487;border-radius:20px}
 .board{display:grid;grid-template-columns:minmax(0,2.25fr) minmax(280px,1fr);gap:18px;align-items:start}
 .panel{min-width:0;background:var(--panel);border-radius:22px;border:1px solid var(--line);box-shadow:0 8px 28px #110a2038;padding:clamp(12px,2vw,22px)}
+.map-heading-group{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px}
 .state-name{font-size:.85rem;font-weight:750;color:var(--badge-ink);background:var(--badge);border-radius:20px;padding:4px 10px;text-align:right}
 .panel h2{font-size:1.28rem;letter-spacing:-.025em}
 .panel-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
@@ -134,7 +135,6 @@ footer a{color:inherit}
 <main>
   <header>
     <div class="brand"><span class="emblem" aria-hidden="true">✦</span><div><h1>Capital Quest</h1><p class="subtitle" id="subtitle">Match each capital to its U.S. state.</p></div></div>
-    <button type="button" id="restart" class="restart">↻ Restart</button>
   </header>
   <div class="game-toolbar">
     <div class="modes" role="tablist" aria-label="Game mode">
@@ -161,7 +161,7 @@ footer a{color:inherit}
   </div>
   <div class="board">
     <section class="panel" aria-labelledby="map-heading">
-      <div class="panel-heading"><h2 id="map-heading">U.S. map</h2><span class="state-name" id="state-name" aria-hidden="true" hidden></span></div>
+      <div class="panel-heading"><div class="map-heading-group"><h2 id="map-heading">U.S. map</h2><span class="count" id="remaining">50 left</span></div><span class="state-name" id="state-name" aria-hidden="true" hidden></span></div>
       <p class="feedback" id="feedback" role="status" aria-atomic="true"><span class="feedback-icon" aria-hidden="true">✦</span><span id="message">Pick a capital from the word bank to begin.</span></p>
       <div class="map-wrap">
         <svg id="map" viewBox="0 0 1050 614" aria-label="Interactive map of the 50 U.S. states" role="group"></svg>
@@ -170,7 +170,7 @@ footer a{color:inherit}
       <div class="state-picker"><label for="state-list">Or choose a state by name</label><select id="state-list"><option value="">Choose a state…</option></select></div>
     </section>
     <section class="panel bank-panel" aria-labelledby="bank-heading">
-      <div class="panel-heading"><h2 id="bank-heading">Capital word bank</h2><span class="count" id="remaining">50 left</span></div>
+      <div class="panel-heading"><h2 id="bank-heading">Capital word bank</h2><button type="button" id="restart" class="restart">↻ Restart</button></div>
       <p class="bank-note" id="instructions">Tap a capital, then tap a state. You can also drag a capital by its ⠿ handle.</p>
       <div id="bank" class="capital-list" role="group" aria-label="Unmatched capitals" aria-describedby="instructions"></div>
       <div id="finish" hidden><span aria-hidden="true">🏆</span><strong>All 50 matched!</strong><p id="results"></p><button type="button" id="again" class="restart">Play again</button></div>
@@ -644,7 +644,6 @@ function chooseMode(tab) {
     byId(modeTab.getAttribute('aria-controls')).hidden = !selected;
   }
   const isMatching = tab === modeTabs[0];
-  byId('restart').hidden = !isMatching;
   if (isMatching) stopNarration();
   byId('subtitle').textContent = isMatching
     ? 'Match each capital to its U.S. state.'
