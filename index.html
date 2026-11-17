@@ -30,6 +30,7 @@ h1{font-size:clamp(2rem,5vw,3.55rem);line-height:1.05;letter-spacing:-.065em}
 .progress::-moz-progress-bar{background:#c6f487;border-radius:20px}
 .board{display:grid;grid-template-columns:minmax(0,2.25fr) minmax(280px,1fr);gap:18px;align-items:start}
 .panel{min-width:0;background:white;border-radius:22px;border:1px solid var(--line);box-shadow:0 8px 28px #2e13570b;padding:clamp(12px,2vw,22px)}
+.state-name{font-size:.85rem;font-weight:750;color:#3b2182;background:#f0eaff;border-radius:20px;padding:4px 10px;text-align:right}
 .panel h2{font-size:1.28rem;letter-spacing:-.025em}
 .panel-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .count{font-size:.8rem;background:#f0eaff;color:#4a2a9a;border-radius:20px;padding:4px 10px;font-weight:750;white-space:nowrap}
@@ -51,6 +52,7 @@ h1{font-size:clamp(2rem,5vw,3.55rem);line-height:1.05;letter-spacing:-.065em}
 .state:hover :is(path,rect),.state:focus-visible :is(path,rect),.state.over :is(path,rect){stroke:#39216f;stroke-width:2.5}
 .state.done :is(path,rect){fill:#a8da91}
 .state.miss :is(path,rect){fill:#ffab8d;stroke:#b64731;stroke-width:2.5}
+.map-leader{stroke:#625389;stroke-width:1;vector-effect:non-scaling-stroke;pointer-events:none}
 .state.done text{fill:#205325}
 .small-states{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:7px}
 .small-states span{font-size:.78rem;font-weight:700;color:var(--muted);margin-right:4px}
@@ -91,10 +93,10 @@ footer a{color:inherit}
   </div>
   <div class="board">
     <section class="panel" aria-labelledby="map-heading">
-      <div class="panel-heading"><h2 id="map-heading">U.S. map</h2></div>
+      <div class="panel-heading"><h2 id="map-heading">U.S. map</h2><span class="state-name" id="state-name" aria-hidden="true" hidden></span></div>
       <p class="feedback" id="feedback" role="status" aria-atomic="true"><span class="feedback-icon" aria-hidden="true">✦</span><span id="message">Pick a capital from the word bank to begin.</span></p>
       <div class="map-wrap">
-        <svg id="map" viewBox="0 0 975 614" aria-label="Interactive map of the 50 U.S. states" role="group"></svg>
+        <svg id="map" viewBox="0 0 1050 614" aria-label="Interactive map of the 50 U.S. states" role="group"></svg>
       </div>
       <div class="small-states" id="small-states" role="group" aria-label="Small state shortcuts"></div>
       <div class="state-picker"><label for="state-list">Or choose a state by name</label><select id="state-list"><option value="">Choose a state…</option></select></div>
@@ -175,6 +177,8 @@ const regions = [
   'WV VA PA NY VT NH ME MA CT RI NJ DE MD'
 ].map(region => region.split(' '));
 const smallStates = ['CT','DE','MD','MA','NH','NJ','RI','VT'];
+// Arrange the labels by their position from north to south.
+const calloutOrder = ['VT','NH','MA','RI','CT','NJ','DE','MD'];
 const shortcuts = byId('small-states');
 const shortcutButtons = new Map();
 const matched = new Set();
@@ -292,6 +296,15 @@ function buildMap() {
     const option = new Option(state.name,state.code);
     stateList.add(option);
   }
+  for (const [index, code] of calloutOrder.entries()) {
+    const state = byCode.get(code);
+    const shape = mapButtons.get(code);
+    const y = 101 + index * 30;
+    const [anchorX, anchorY] = state.center;
+    shape.append(svg('line',{class:'map-leader',x1:anchorX,y1:anchorY,x2:989,y2:y}));
+    shape.append(svg('rect',{x:989,y:y-13,width:53,height:26,rx:5}));
+    addLabel(shape,state,[1015,y]);
+  }
   shortcuts.replaceChildren();
   shortcutButtons.clear();
   const heading = document.createElement('span');
@@ -323,6 +336,7 @@ function reset() {
   clearMistake();
   streak = bestStreak = guesses = 0;
   map.replaceChildren();
+  showStateName(null);
   stateList.length = 1;
   stateList.value = '';
   mapButtons.clear();
@@ -350,6 +364,27 @@ function reset() {
   byId('finish').hidden = true;
   updateScore();
   announce('Pick a capital from the word bank to begin.');
+}
+
+const stateName = byId('state-name');
+function showStateName(target) {
+  stateName.hidden = !target;
+  stateName.textContent = target ? byCode.get(target.dataset.state).name : '';
+}
+
+for (const group of [map,shortcuts]) {
+  group.addEventListener('pointerover', event => {
+    if (event.pointerType !== 'touch') showStateName(event.target.closest('[data-state]'));
+  });
+  group.addEventListener('pointerout', event => {
+    if (event.pointerType === 'touch') return;
+    const next = event.relatedTarget?.closest?.('[data-state]');
+    showStateName(group.contains(next) ? next : group.querySelector('[data-state]:focus-visible'));
+  });
+  group.addEventListener('focusin', event => showStateName(event.target.closest('[data-state]')));
+  group.addEventListener('focusout', event => {
+    if (!group.contains(event.relatedTarget)) showStateName(null);
+  });
 }
 
 map.addEventListener('click', event => {
