@@ -685,6 +685,7 @@ async function playQuestion() {
   const attempt = narrationAttempt;
   const clip = quizIndex === quizDeck.length ? quizResult().clip : quizDeck[quizIndex].code.toLowerCase();
   narration.src = 'audio/quiz/' + clip + '.mp3';
+  narration.playbackRate = 0.85;
   try {
     await narration.play();
   } catch (error) {
