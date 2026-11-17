@@ -92,8 +92,7 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid var(--control-b
 #finish{padding:22px 10px;text-align:center;background:var(--status);border-radius:13px}
 #finish strong{display:block;font-size:1.3rem;margin:5px}
 #finish button{margin-top:12px}
-.game-toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:16px}
-.theme-picker{display:flex;flex-wrap:wrap;margin-inline-start:auto}
+.theme-picker{display:flex;justify-content:center;flex-wrap:wrap;margin-top:8px}
 .theme-swatch{display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:transparent}
 .theme-swatch::before{content:"";width:23px;height:23px;border-radius:50%;border:1px solid #ffffff80;background:linear-gradient(135deg,var(--swatch-light),var(--swatch-dark))}
 .theme-swatch:hover::before{outline:2px solid var(--muted);outline-offset:2px}
@@ -104,7 +103,7 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid var(--control-b
 .theme-swatch[data-theme=blue]{--swatch-light:#b2deff;--swatch-dark:#17548d}
 .theme-swatch[data-theme=green]{--swatch-light:#c3edbf;--swatch-dark:#276437}
 .theme-swatch[data-theme=solarized]{--swatch-light:#f5d579;--swatch-dark:#006778}
-.modes{display:flex;gap:5px;width:fit-content;padding:4px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.modes{display:flex;gap:5px;width:fit-content;padding:4px;margin-bottom:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
 .mode{min-height:44px;padding:7px 16px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted);font-weight:750}
 .mode:hover{background:var(--control-hover);color:var(--ink)}
 .mode[aria-selected=true]{background:var(--accent);border-color:var(--accent-border);color:var(--accent-ink)}
@@ -145,19 +144,9 @@ footer a{color:inherit}
   <header>
     <div class="brand"><span class="emblem" aria-hidden="true">✦</span><div><h1>Capital Quest</h1><p class="subtitle" id="subtitle">Match each capital to its U.S. state.</p></div></div>
   </header>
-  <div class="game-toolbar">
-    <div class="modes" role="tablist" aria-label="Game mode">
-      <button type="button" class="mode" id="matching-tab" role="tab" aria-selected="true" aria-controls="matching-panel">Matching</button>
-      <button type="button" class="mode" id="flashcards-tab" role="tab" aria-selected="false" aria-controls="flashcards-panel" tabindex="-1">Flashcards</button>
-    </div>
-    <div class="theme-picker" role="group" aria-label="Color themes">
-      <button type="button" class="theme-swatch" data-theme="purple" aria-label="Purple" title="Purple" aria-pressed="true"></button>
-      <button type="button" class="theme-swatch" data-theme="black" aria-label="Black" title="Black" aria-pressed="false"></button>
-      <button type="button" class="theme-swatch" data-theme="red" aria-label="Red" title="Red" aria-pressed="false"></button>
-      <button type="button" class="theme-swatch" data-theme="blue" aria-label="Blue" title="Blue" aria-pressed="false"></button>
-      <button type="button" class="theme-swatch" data-theme="green" aria-label="Green" title="Green" aria-pressed="false"></button>
-      <button type="button" class="theme-swatch" data-theme="solarized" aria-label="Solarized" title="Solarized" aria-pressed="false"></button>
-    </div>
+  <div class="modes" role="tablist" aria-label="Game mode">
+    <button type="button" class="mode" id="matching-tab" role="tab" aria-selected="true" aria-controls="matching-panel">Matching</button>
+    <button type="button" class="mode" id="flashcards-tab" role="tab" aria-selected="false" aria-controls="flashcards-panel" tabindex="-1">Flashcards</button>
   </div>
   <div id="matching-panel" role="tabpanel" aria-labelledby="matching-tab">
   <div class="scoreboard" aria-label="Game progress">
@@ -242,7 +231,17 @@ footer a{color:inherit}
       </section>
     </div>
   </div>
-  <footer>Map data from the <a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html">U.S. Census Bureau</a> via <a href="https://github.com/topojson/us-atlas">U.S. Atlas</a>.</footer>
+  <footer>
+    <p>Map data from the <a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html">U.S. Census Bureau</a> via <a href="https://github.com/topojson/us-atlas">U.S. Atlas</a>.</p>
+    <div class="theme-picker" role="group" aria-label="Color themes">
+      <button type="button" class="theme-swatch" data-theme="purple" aria-label="Purple" title="Purple" aria-pressed="true"></button>
+      <button type="button" class="theme-swatch" data-theme="black" aria-label="Black" title="Black" aria-pressed="false"></button>
+      <button type="button" class="theme-swatch" data-theme="red" aria-label="Red" title="Red" aria-pressed="false"></button>
+      <button type="button" class="theme-swatch" data-theme="blue" aria-label="Blue" title="Blue" aria-pressed="false"></button>
+      <button type="button" class="theme-swatch" data-theme="green" aria-label="Green" title="Green" aria-pressed="false"></button>
+      <button type="button" class="theme-swatch" data-theme="solarized" aria-label="Solarized" title="Solarized" aria-pressed="false"></button>
+    </div>
+  </footer>
 </main>
 <script>
 'use strict';
