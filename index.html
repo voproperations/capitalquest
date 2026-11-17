@@ -73,6 +73,20 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid #615473;backgro
 #finish{padding:22px 10px;text-align:center;background:#40324f;border-radius:13px}
 #finish strong{display:block;font-size:1.3rem;margin:5px}
 #finish button{margin-top:12px}
+.modes{display:flex;gap:5px;width:fit-content;padding:4px;margin-bottom:16px;border:1px solid var(--line);border-radius:14px;background:#2c263b}
+.mode{min-height:44px;padding:7px 16px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted);font-weight:750}
+.mode:hover{background:#493a60;color:var(--ink)}
+.mode[aria-selected=true]{background:#6746b6;border-color:#b699ed;color:white}
+.cards-panel{max-width:720px;margin:0 auto}
+.cards-panel .panel-heading{margin-bottom:16px}
+.card{display:grid;justify-items:center;align-content:center;gap:10px;width:100%;min-height:clamp(215px,36vh,335px);padding:22px;border:1px solid #9881c9;border-radius:16px;background:#463664;color:#fff;text-align:center}
+.card:hover{background:#503c72}
+.card[data-revealed=true]{background:#28483b;border-color:#81ae92}
+.card-type,.card-action{font-size:.9rem;font-weight:650;color:#e3d6f8}
+.card[data-revealed=true] :is(.card-type,.card-action){color:#d0f4db}
+.card-answer{display:block;font-size:clamp(1.7rem,5vw,3.15rem);line-height:1.12;letter-spacing:-.045em;overflow-wrap:anywhere}
+.card-controls{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:16px}
+.card-controls button:disabled{opacity:.55;cursor:default}
 [hidden]{display:none!important}
 footer{margin-top:14px;text-align:right;font-size:.75rem;color:var(--muted)}
 footer a{color:inherit}
@@ -89,9 +103,14 @@ footer a{color:inherit}
 <body>
 <main>
   <header>
-    <div class="brand"><span class="emblem" aria-hidden="true">✦</span><div><h1>Capital Quest</h1><p class="subtitle">Match each capital to its U.S. state.</p></div></div>
+    <div class="brand"><span class="emblem" aria-hidden="true">✦</span><div><h1>Capital Quest</h1><p class="subtitle" id="subtitle">Match each capital to its U.S. state.</p></div></div>
     <button type="button" id="restart" class="restart">↻ Restart</button>
   </header>
+  <div class="modes" role="tablist" aria-label="Game mode">
+    <button type="button" class="mode" id="matching-tab" role="tab" aria-selected="true" aria-controls="matching-panel">Matching</button>
+    <button type="button" class="mode" id="flashcards-tab" role="tab" aria-selected="false" aria-controls="flashcards-panel" tabindex="-1">Flashcards</button>
+  </div>
+  <div id="matching-panel" role="tabpanel" aria-labelledby="matching-tab">
   <div class="scoreboard" aria-label="Game progress">
     <span class="metric"><strong id="score">0/50</strong> matched</span>
     <progress id="progress" class="progress" value="0" max="50" aria-label="States matched"></progress>
@@ -114,6 +133,25 @@ footer a{color:inherit}
       <div id="finish" hidden><span aria-hidden="true">🏆</span><strong>All 50 matched!</strong><p id="results"></p><button type="button" id="again" class="restart">Play again</button></div>
     </section>
   </div>
+  </div>
+  <section class="panel cards-panel" id="flashcards-panel" role="tabpanel" aria-labelledby="flashcards-tab" hidden>
+    <div class="panel-heading">
+      <h2>State capitals</h2>
+      <span class="count" id="card-position">1 / 50</span>
+    </div>
+    <button type="button" class="card" id="card">
+      <span role="status" aria-atomic="true">
+        <span class="card-type" id="card-type">State</span>
+        <strong class="card-answer" id="card-answer"></strong>
+      </span>
+      <span class="card-action" id="card-action">Flip to see the capital</span>
+    </button>
+    <div class="card-controls">
+      <button type="button" class="restart" id="previous-card">← Previous</button>
+      <button type="button" class="restart" id="shuffle-cards">Shuffle</button>
+      <button type="button" class="restart" id="next-card">Next →</button>
+    </div>
+  </section>
   <footer>Map data from the <a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html">U.S. Census Bureau</a> via <a href="https://github.com/topojson/us-atlas">U.S. Atlas</a>.</footer>
 </main>
 <script>
@@ -484,6 +522,77 @@ function swallowDragClick(event) {
 }
 window.addEventListener('pointerup',endDrag);
 window.addEventListener('pointercancel',endDrag);
+const modeTabs = [byId('matching-tab'), byId('flashcards-tab')];
+const card = byId('card');
+const previousCard = byId('previous-card');
+const nextCard = byId('next-card');
+const deck = [...states];
+let cardIndex = 0;
+let revealed = false;
+
+function chooseMode(tab) {
+  for (const modeTab of modeTabs) {
+    const selected = modeTab === tab;
+    modeTab.setAttribute('aria-selected', String(selected));
+    modeTab.tabIndex = selected ? 0 : -1;
+    byId(modeTab.getAttribute('aria-controls')).hidden = !selected;
+  }
+  const isMatching = tab === modeTabs[0];
+  byId('restart').hidden = !isMatching;
+  byId('subtitle').textContent = isMatching
+    ? 'Match each capital to its U.S. state.'
+    : 'Think of the capital, then flip the card to check.';
+}
+
+for (const tab of modeTabs) {
+  tab.addEventListener('click', () => chooseMode(tab));
+  tab.addEventListener('keydown', event => {
+    const destination = {ArrowLeft:modeTabs.find(other => other !== tab),
+      ArrowRight:modeTabs.find(other => other !== tab),Home:modeTabs[0],End:modeTabs[1]}[event.key];
+    if (!destination) return;
+    event.preventDefault();
+    chooseMode(destination);
+    destination.focus();
+  });
+}
+
+function showCard() {
+  const state = deck[cardIndex];
+  card.dataset.revealed = String(revealed);
+  byId('card-type').textContent = revealed ? state.name + ' · Capital' : 'State';
+  byId('card-answer').textContent = revealed ? state.capital : state.name;
+  byId('card-action').textContent = revealed ? 'Flip back to the state' : 'Flip to see the capital';
+  byId('card-position').textContent = (cardIndex + 1) + ' / ' + deck.length;
+  previousCard.disabled = cardIndex === 0;
+  nextCard.disabled = cardIndex === deck.length - 1;
+}
+
+function stepCard(direction) {
+  cardIndex += direction;
+  revealed = false;
+  const control = direction < 0 ? previousCard : nextCard;
+  const restoreFocus = document.activeElement === control;
+  showCard();
+  if (restoreFocus && control.disabled) card.focus();
+}
+
+card.addEventListener('click', () => {
+  revealed = !revealed;
+  showCard();
+});
+previousCard.addEventListener('click', () => stepCard(-1));
+nextCard.addEventListener('click', () => stepCard(1));
+byId('shuffle-cards').addEventListener('click', () => {
+  for (let index = deck.length - 1; index > 0; index--) {
+    const swap = Math.floor(Math.random() * (index + 1));
+    [deck[index], deck[swap]] = [deck[swap], deck[index]];
+  }
+  cardIndex = 0;
+  revealed = false;
+  showCard();
+});
+showCard();
+
 reset();
 </script>
 </body>
