@@ -76,6 +76,12 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid #dbcff0;backgro
 [hidden]{display:none!important}
 footer{margin-top:14px;text-align:right;font-size:.75rem;color:var(--muted)}
 footer a{color:inherit}
+@media(min-width:801px){
+  .board{align-items:stretch}
+  .bank-panel{display:flex;flex-direction:column}
+  /* Let the map set the row height while the capital list fills the available space. */
+  #bank{flex:1;min-height:0;max-height:none;contain:size}
+}
 @media(max-width:800px){main{padding-top:18px}.board{grid-template-columns:1fr;gap:12px}header{margin-bottom:15px}.scoreboard{margin-bottom:12px}#bank{grid-template-columns:repeat(auto-fit,minmax(125px,1fr));max-height:245px}}
 @media(max-width:460px){.brand{gap:10px}.emblem{width:43px;height:43px;border-radius:12px;font-size:26px}.subtitle{font-size:.82rem}.scoreboard{gap:12px;padding:10px 13px}.restart{padding:7px 9px;font-size:.84rem}header{gap:7px}.progress{min-width:24px}.metric{font-size:.75rem}.metric strong{font-size:1.05rem}.state-picker{margin-top:8px}.feedback{min-height:44px}.panel-heading{margin-bottom:7px}}
 </style>
@@ -101,7 +107,7 @@ footer a{color:inherit}
       <div class="small-states" id="small-states" role="group" aria-label="Small state shortcuts"></div>
       <div class="state-picker"><label for="state-list">Or choose a state by name</label><select id="state-list"><option value="">Choose a state…</option></select></div>
     </section>
-    <section class="panel" aria-labelledby="bank-heading">
+    <section class="panel bank-panel" aria-labelledby="bank-heading">
       <div class="panel-heading"><h2 id="bank-heading">Capital word bank</h2><span class="count" id="remaining">50 left</span></div>
       <p class="bank-note" id="instructions">Tap a capital, then tap a state. You can also drag a capital by its ⠿ handle.</p>
       <div id="bank" role="group" aria-label="Unmatched capitals" aria-describedby="instructions"></div>
