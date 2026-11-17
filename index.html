@@ -63,7 +63,7 @@ h1{font-size:clamp(2rem,5vw,3.55rem);line-height:1.05;letter-spacing:-.065em}
 .state-picker{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:.875rem;color:var(--muted);font-weight:650}
 select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid #615473;background:#382f49;border-radius:9px;max-width:100%}
 .bank-note{font-size:.88rem;color:var(--muted);margin:-3px 0 13px}
-#bank{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:8px;max-height:clamp(310px,54vh,535px);overflow:auto;scrollbar-gutter:stable;padding:4px;margin:-4px}
+.capital-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:8px;max-height:clamp(310px,54vh,535px);overflow:auto;scrollbar-gutter:stable;padding:4px;margin:-4px}
 .chip{border:1px solid #574b69;border-radius:10px;min-height:48px;background:#393047;display:flex;align-items:center;text-align:left;gap:5px;padding:3px 7px 3px 0;font-size:.85rem;font-weight:720;line-height:1.19;overflow-wrap:anywhere;user-select:none;touch-action:pan-y}
 .chip:hover{background:#4a3a60;border-color:#9b7bc9}
 .chip[aria-pressed=true],.ghost{background:#6746b6;color:white;border-color:#b699ed}
@@ -77,6 +77,15 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid #615473;backgro
 .mode{min-height:44px;padding:7px 16px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted);font-weight:750}
 .mode:hover{background:#493a60;color:var(--ink)}
 .mode[aria-selected=true]{background:#6746b6;border-color:#b699ed;color:white}
+.flashcard-modes{max-width:720px;margin:0 auto 14px;display:flex;gap:8px}
+.flashcard-modes button[aria-pressed=true]{background:#6746b6;border-color:#b699ed;color:white}
+.quiz-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
+.quiz-tools .feedback{flex:1;min-width:135px;margin:0}
+.quiz-choice{padding-inline:10px}
+.quiz-choice:disabled{cursor:default}
+.chip.quiz-wrong{background:#583a39;border-color:#af7667;color:#ffdaca}
+.quiz-prompt{cursor:default}
+.quiz-prompt:hover{background:#463664}
 .cards-panel{max-width:720px;margin:0 auto}
 .cards-panel .panel-heading{margin-bottom:16px}
 .card{display:grid;justify-items:center;align-content:center;gap:10px;width:100%;min-height:clamp(215px,36vh,335px);padding:22px;border:1px solid #9881c9;border-radius:16px;background:#463664;color:#fff;text-align:center}
@@ -94,9 +103,9 @@ footer a{color:inherit}
   .board{align-items:stretch}
   .bank-panel{display:flex;flex-direction:column}
   /* Let the map set the row height while the capital list fills the available space. */
-  #bank{flex:1;min-height:0;max-height:none;contain:size}
+  .capital-list{flex:1;min-height:0;max-height:none;contain:size}
 }
-@media(max-width:800px){main{padding-top:18px}.board{grid-template-columns:1fr;gap:12px}header{margin-bottom:15px}.scoreboard{margin-bottom:12px}#bank{grid-template-columns:repeat(auto-fit,minmax(125px,1fr));max-height:245px}}
+@media(max-width:800px){main{padding-top:18px}.board{grid-template-columns:1fr;gap:12px}header{margin-bottom:15px}.scoreboard{margin-bottom:12px}.capital-list{grid-template-columns:repeat(auto-fit,minmax(125px,1fr));max-height:245px}}
 @media(max-width:460px){.brand{gap:10px}.emblem{width:43px;height:43px;border-radius:12px;font-size:26px}.subtitle{font-size:.82rem}.scoreboard{gap:12px;padding:10px 13px}.restart{padding:7px 9px;font-size:.84rem}header{gap:7px}.progress{min-width:24px}.metric{font-size:.75rem}.metric strong{font-size:1.05rem}.state-picker{margin-top:8px}.feedback{min-height:44px}.panel-heading{margin-bottom:7px}}
 </style>
 </head>
@@ -129,29 +138,58 @@ footer a{color:inherit}
     <section class="panel bank-panel" aria-labelledby="bank-heading">
       <div class="panel-heading"><h2 id="bank-heading">Capital word bank</h2><span class="count" id="remaining">50 left</span></div>
       <p class="bank-note" id="instructions">Tap a capital, then tap a state. You can also drag a capital by its ⠿ handle.</p>
-      <div id="bank" role="group" aria-label="Unmatched capitals" aria-describedby="instructions"></div>
+      <div id="bank" class="capital-list" role="group" aria-label="Unmatched capitals" aria-describedby="instructions"></div>
       <div id="finish" hidden><span aria-hidden="true">🏆</span><strong>All 50 matched!</strong><p id="results"></p><button type="button" id="again" class="restart">Play again</button></div>
     </section>
   </div>
   </div>
-  <section class="panel cards-panel" id="flashcards-panel" role="tabpanel" aria-labelledby="flashcards-tab" hidden>
-    <div class="panel-heading">
-      <h2>State capitals</h2>
-      <span class="count" id="card-position">1 / 50</span>
+  <div id="flashcards-panel" role="tabpanel" aria-labelledby="flashcards-tab" hidden>
+    <div class="flashcard-modes" role="group" aria-label="Flashcard activity">
+      <button type="button" id="study-mode" class="restart" aria-pressed="true" aria-controls="study-panel">Study</button>
+      <button type="button" id="quiz-mode" class="restart" aria-pressed="false" aria-controls="quiz-panel">Quiz</button>
     </div>
-    <button type="button" class="card" id="card">
-      <span role="status" aria-atomic="true">
-        <span class="card-type" id="card-type">State</span>
-        <strong class="card-answer" id="card-answer"></strong>
-      </span>
-      <span class="card-action" id="card-action">Flip to see the capital</span>
-    </button>
-    <div class="card-controls">
-      <button type="button" class="restart" id="previous-card">← Previous</button>
-      <button type="button" class="restart" id="shuffle-cards">Shuffle</button>
-      <button type="button" class="restart" id="next-card">Next →</button>
+    <section class="panel cards-panel" id="study-panel" aria-label="Study flashcards">
+      <div class="panel-heading">
+        <h2>State capitals</h2>
+        <span class="count" id="card-position">1 / 50</span>
+      </div>
+      <button type="button" class="card" id="card">
+        <span role="status" aria-atomic="true">
+          <span class="card-type" id="card-type">State</span>
+          <strong class="card-answer" id="card-answer"></strong>
+        </span>
+        <span class="card-action" id="card-action">Flip to see the capital</span>
+      </button>
+      <div class="card-controls">
+        <button type="button" class="restart" id="previous-card">← Previous</button>
+        <button type="button" class="restart" id="shuffle-cards">Shuffle</button>
+        <button type="button" class="restart" id="next-card">Next →</button>
+      </div>
+    </section>
+    <div class="board" id="quiz-panel" hidden>
+      <section class="panel" aria-labelledby="quiz-heading">
+        <div class="panel-heading">
+          <h2 id="quiz-heading">Capital quiz</h2>
+          <span class="count" id="quiz-score">0 / 50 correct</span>
+        </div>
+        <div class="card quiz-prompt" id="quiz-prompt" role="status" aria-atomic="true">
+          <span class="card-type">What is the capital of</span>
+          <strong class="card-answer" id="quiz-state"></strong>
+        </div>
+      </section>
+      <section class="panel bank-panel" aria-labelledby="quiz-bank-heading">
+        <div class="panel-heading">
+          <h2 id="quiz-bank-heading">Capital word bank</h2>
+          <button type="button" class="restart" id="restart-quiz">↻ Restart</button>
+        </div>
+        <div class="quiz-tools">
+          <p class="feedback" id="quiz-feedback" role="status" aria-atomic="true"></p>
+          <button type="button" class="restart" id="next-question" hidden>Next →</button>
+        </div>
+        <div id="quiz-bank" class="capital-list" role="group" aria-label="Capital choices"></div>
+      </section>
     </div>
-  </section>
+  </div>
   <footer>Map data from the <a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html">U.S. Census Bureau</a> via <a href="https://github.com/topojson/us-atlas">U.S. Atlas</a>.</footer>
 </main>
 <script>
@@ -541,7 +579,7 @@ function chooseMode(tab) {
   byId('restart').hidden = !isMatching;
   byId('subtitle').textContent = isMatching
     ? 'Match each capital to its U.S. state.'
-    : 'Think of the capital, then flip the card to check.';
+    : flashcardSubtitle();
 }
 
 for (const tab of modeTabs) {
@@ -582,15 +620,117 @@ card.addEventListener('click', () => {
 });
 previousCard.addEventListener('click', () => stepCard(-1));
 nextCard.addEventListener('click', () => stepCard(1));
-byId('shuffle-cards').addEventListener('click', () => {
-  for (let index = deck.length - 1; index > 0; index--) {
+function shuffle(items) {
+  for (let index = items.length - 1; index > 0; index--) {
     const swap = Math.floor(Math.random() * (index + 1));
-    [deck[index], deck[swap]] = [deck[swap], deck[index]];
+    [items[index], items[swap]] = [items[swap], items[index]];
   }
+}
+byId('shuffle-cards').addEventListener('click', () => {
+  shuffle(deck);
   cardIndex = 0;
   revealed = false;
   showCard();
 });
+const studyMode = byId('study-mode');
+const quizMode = byId('quiz-mode');
+const quizPanel = byId('quiz-panel');
+const quizBank = byId('quiz-bank');
+const quizFeedback = byId('quiz-feedback');
+const nextQuestion = byId('next-question');
+const quizDeck = [...states];
+let quizIndex = 0;
+let quizCorrect = 0;
+let quizAnswered = false;
+
+function flashcardSubtitle() {
+  return quizPanel.hidden
+    ? 'Think of the capital, then flip the card to check.'
+    : 'Pick the capital for the state shown on the card.';
+}
+
+function chooseFlashcardMode(isQuiz) {
+  studyMode.setAttribute('aria-pressed', String(!isQuiz));
+  quizMode.setAttribute('aria-pressed', String(isQuiz));
+  byId('study-panel').hidden = isQuiz;
+  quizPanel.hidden = !isQuiz;
+  byId('subtitle').textContent = flashcardSubtitle();
+}
+
+function setQuizFeedback(message, kind = '') {
+  quizFeedback.dataset.kind = kind;
+  quizFeedback.textContent = message;
+}
+
+function showQuestion() {
+  quizAnswered = false;
+  const finished = quizIndex === quizDeck.length;
+  const question = byId('quiz-prompt');
+  question.firstElementChild.textContent = finished ? 'Quiz complete' : 'What is the capital of';
+  byId('quiz-state').textContent = finished ? 'All 50 correct!' : quizDeck[quizIndex].name;
+  question.dataset.revealed = String(finished);
+  byId('quiz-score').textContent = quizCorrect + ' / ' + quizDeck.length + ' correct';
+  setQuizFeedback(finished ? 'Great work! You found every state capital.' :
+    'Choose the capital of ' + quizDeck[quizIndex].name + '.', finished ? 'complete' : '');
+  nextQuestion.hidden = true;
+  quizBank.hidden = finished;
+  quizBank.scrollTop = 0;
+  for (const button of quizBank.children) button.disabled = false;
+}
+
+function resetQuiz() {
+  shuffle(quizDeck);
+  quizIndex = 0;
+  quizCorrect = 0;
+  quizBank.replaceChildren();
+  for (const state of capitals) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'chip quiz-choice';
+    button.dataset.answer = state.code;
+    button.textContent = state.capital;
+    quizBank.append(button);
+  }
+  showQuestion();
+}
+
+studyMode.addEventListener('click', () => chooseFlashcardMode(false));
+quizMode.addEventListener('click', () => chooseFlashcardMode(true));
+byId('restart-quiz').addEventListener('click', () => {
+  if (!quizCorrect || quizCorrect === quizDeck.length || confirm('Restart the flashcard quiz?')) resetQuiz();
+});
+quizBank.addEventListener('click', event => {
+  const button = event.target.closest('[data-answer]');
+  if (!button || quizAnswered) return;
+  const state = quizDeck[quizIndex];
+  quizBank.querySelector('.quiz-wrong')?.classList.remove('quiz-wrong');
+  if (button.dataset.answer !== state.code) {
+    button.classList.add('quiz-wrong');
+    setQuizFeedback('Try again. ' + button.textContent + ' isn’t the capital of ' + state.name + '.', 'wrong');
+    return;
+  }
+  quizAnswered = true;
+  quizCorrect++;
+  byId('quiz-score').textContent = quizCorrect + ' / ' + quizDeck.length + ' correct';
+  button.remove();
+  if (quizCorrect === quizDeck.length) {
+    quizIndex++;
+    showQuestion();
+    byId('restart-quiz').focus({preventScroll:true});
+    return;
+  }
+  setQuizFeedback('Correct! ' + state.capital + ' is the capital of ' + state.name + '.', 'correct');
+  for (const remaining of quizBank.children) remaining.disabled = true;
+  nextQuestion.hidden = false;
+  nextQuestion.focus({preventScroll:true});
+});
+nextQuestion.addEventListener('click', () => {
+  quizIndex++;
+  showQuestion();
+  quizBank.firstElementChild.focus({preventScroll:true});
+});
+resetQuiz();
+
 showCard();
 
 reset();
