@@ -194,6 +194,8 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid var(--control-b
 [hidden]{display:none!important}
 footer{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 18px;margin-top:14px;text-align:center;font-size:.75rem;color:var(--muted)}
 footer a{color:inherit}
+.sample-results{margin-top:28px}
+.sample-results>p{color:var(--muted);margin:5px 0 14px}
 .results-page>h2{margin:20px 0 10px}
 .results-page>h2:first-child{margin-top:0}
 .results-page .panel+.panel{margin-top:12px}
@@ -391,6 +393,14 @@ footer a{color:inherit}
   <section class="panel" aria-labelledby="review-heading">
     <p id="review-status" role="status"></p>
     <ul class="review-list" id="review-list"></ul>
+  </section>
+  <section class="sample-results results-page" aria-labelledby="sample-results-heading">
+    <h2 id="sample-results-heading">Example quiz results</h2>
+    <p>Fictional scores showing how the histories and charts look.</p>
+    <section class="panel" id="sample-flashcard-results" aria-label="Example flashcard quiz results"></section>
+    <h2>Matching</h2>
+    <section class="panel" id="sample-capital-map-results" aria-label="Example Capital Map quiz results"></section>
+    <section class="panel" id="sample-state-map-results" aria-label="Example State Map quiz results"></section>
   </section>
 </main>
 <div id="quiz-celebration" class="quiz-celebration" aria-hidden="true"></div>
@@ -1600,6 +1610,21 @@ function renderQuizResults() {
   warning.hidden = !quizResultsStorageLimited;
   warning.textContent = quizResultsStorageLimited ? 'Browser storage is unavailable or full. Some results may only be visible in this session.' : '';
 }
+function renderExampleQuizResults() {
+  const makeExamples = (types, scores) => scores.map((correct,index) => ({
+    type:types[index % types.length],
+    correct,
+    total:50,
+    timestamp:Date.UTC(2026,10,2+index*2,19)
+  }));
+  renderResultGroup('sample-flashcard-results','Flashcard quizzes',
+    makeExamples(['cards','narrated'],[28,32,31,37,38,44]),true);
+  renderResultGroup('sample-capital-map-results','Capitals',
+    makeExamples(['capital-map'],[35,40,39,43,45,40]));
+  renderResultGroup('sample-state-map-results','States',
+    makeExamples(['state-map'],[30,35,37,36,39,39]));
+}
+
 window.addEventListener('storage', event => {
   if (!byId('results-panel').hidden && (event.key === null || event.key.startsWith(quizResultPrefix))) renderQuizResults();
 });
@@ -1689,7 +1714,10 @@ function showRequestedPage() {
   document.title = showReview ? 'Assets and Audios | Capital Quest' : gameTitle;
   if (showReview) {
     stopNarration();
-    if (!reviewList.firstElementChild) buildReviewList();
+    if (!reviewList.firstElementChild) {
+      buildReviewList();
+      renderExampleQuizResults();
+    }
     window.scrollTo(0,0);
     byId('review-heading').focus({preventScroll:true});
   } else {
