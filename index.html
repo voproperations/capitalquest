@@ -133,21 +133,27 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid var(--control-b
 .celebration-banner::before,.celebration-banner::after{content:"";position:absolute;top:24%;width:34px;height:82%;background:#732576}
 .celebration-banner::before{right:100%;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,26% 50%)}
 .celebration-banner::after{left:100%;clip-path:polygon(0 0,100% 0,74% 50%,100% 100%,0 100%)}
-.celebration-character{
+.celebration-walker{
   position:absolute;z-index:1;left:50%;top:calc(35% + clamp(39px,5.5vw,74px));
-  width:clamp(88px,min(24vw,23vh),174px);height:auto;
-  filter:drop-shadow(0 5px 5px #1c0e3280);
-  animation:character-walk 2.1s linear infinite,character-fade 8.4s both;
+  width:clamp(88px,min(24vw,23vh),174px);
+  animation:character-crossing 2.8s linear infinite,character-fade 8.4s both;
 }
-@keyframes character-walk{
-  0%,100%{transform:translate(-68%,0) rotate(-3deg)}
-  12.5%{transform:translate(-59%,-3px) rotate(1deg)}
-  25%{transform:translate(-50%,0) rotate(-3deg)}
-  37.5%{transform:translate(-41%,-3px) rotate(1deg)}
-  50%{transform:translate(-32%,0) rotate(3deg)}
-  62.5%{transform:translate(-41%,-3px) rotate(-1deg)}
-  75%{transform:translate(-50%,0) rotate(3deg)}
-  87.5%{transform:translate(-59%,-3px) rotate(-1deg)}
+.celebration-character{
+  display:block;width:100%;height:auto;
+  filter:drop-shadow(0 5px 5px #1c0e3280);
+  animation:character-turn 2.8s ease-in-out infinite,character-step .35s ease-in-out infinite;
+}
+@keyframes character-crossing{
+  0%,5%,94%,100%{transform:translateX(-80%)}
+  44%,54%{transform:translateX(-20%)}
+}
+@keyframes character-turn{
+  0%,43%,100%{transform:perspective(420px) rotateY(33deg) rotateZ(4deg)}
+  53%,93%{transform:perspective(420px) rotateY(147deg) rotateZ(4deg)}
+}
+@keyframes character-step{
+  0%,100%{translate:0 0}
+  50%{translate:0 -4px}
 }
 @keyframes character-fade{0%,100%{opacity:0}8%,89%{opacity:1}}
 @keyframes party-banner{
@@ -1220,12 +1226,15 @@ function showCelebration() {
   banner.textContent = 'Great Job!';
   banner.addEventListener('animationend', () => banner.remove(), {once:true});
   decorations.append(banner);
+  const walker = document.createElement('div');
+  walker.className = 'celebration-walker';
   const character = document.createElement('img');
   character.className = 'celebration-character';
   character.src = 'celebration-cartman.png';
   character.alt = '';
-  character.addEventListener('animationend', () => character.remove(), {once:true});
-  decorations.append(character);
+  walker.addEventListener('animationend', () => walker.remove(), {once:true});
+  walker.append(character);
+  decorations.append(walker);
   const confettiCount = 96;
   const balloonCount = 24;
   for (let index = 0; index < confettiCount + balloonCount; index++) {
