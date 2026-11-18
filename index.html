@@ -869,7 +869,7 @@ function quizResult() {
 }
 
 function quizAudioSource(clip, isEnding) {
-  return 'audio/quiz/' + clip + '.mp3' + (isEnding ? '?v=2' : '');
+  return 'audio/quiz/' + clip + '.mp3' + (isEnding ? '?v=3' : '');
 }
 
 async function playQuestion() {
@@ -1063,7 +1063,7 @@ function buildReviewList() {
   const clips = states.map(state => [state.name, quizAudioSource(state.code.toLowerCase(), false)]);
   clips.push(
     ['Great Job! — Beefcake', quizAudioSource('great-job', true)],
-    ['Keep Practicing — Potpie', quizAudioSource('keep-practicing', true)]
+    ['Keep Practicing — Big Boned', quizAudioSource('keep-practicing', true)]
   );
   for (const [name, src] of clips) {
     const row = document.createElement('li');
