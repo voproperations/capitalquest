@@ -120,6 +120,7 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid var(--control-b
 .chip.choice-wrong{background:#583a39;border-color:#af7667;color:#ffdaca}
 .narration-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px}
 .narration-status{font-size:.85rem;color:var(--muted)}
+.quiz-progress{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
 .quiz-prompt{cursor:default}
 .quiz-prompt:hover{background:var(--card)}
 .cards-panel .panel-heading{margin-bottom:16px}
@@ -223,7 +224,10 @@ footer a{color:inherit}
       <section class="panel" aria-labelledby="quiz-heading">
         <div class="panel-heading">
           <h2 id="quiz-heading">Capital quiz</h2>
-          <span class="count" id="quiz-score">0 / 50 correct</span>
+          <div class="quiz-progress">
+            <span class="count" id="quiz-score">0 / 50 correct</span>
+            <span class="count" id="quiz-remaining">50 left</span>
+          </div>
         </div>
         <button type="button" class="card" id="start-quiz">
           <strong class="card-answer">Click to Start</strong>
@@ -844,13 +848,19 @@ studyBank.addEventListener('click', event => {
   }
 });
 
+function updateQuizProgress() {
+  const remaining = quizDeck.length - quizIndex - Number(quizAnswered);
+  byId('quiz-score').textContent = quizCorrect + ' / ' + quizDeck.length + ' correct';
+  byId('quiz-remaining').textContent = remaining + ' left';
+}
+
 function showQuestion() {
   quizAnswered = false;
   const finished = quizIndex === quizDeck.length;
   const question = byId('quiz-prompt');
   question.hidden = !quizStarted;
   startQuiz.hidden = quizStarted;
-  byId('quiz-score').textContent = quizCorrect + ' / ' + quizDeck.length + ' correct';
+  updateQuizProgress();
   quizBank.hidden = !quizStarted || finished;
   narrationControls.hidden = !narrated || !quizStarted;
   if (!quizStarted) {
@@ -908,7 +918,7 @@ quizBank.addEventListener('click', event => {
   const result = isCorrect ? 'Correct! ' : 'Incorrect. ';
   setFlashcardFeedback(quizFeedback, result + state.capital + ' is the capital of ' + state.name + '.',
     isCorrect ? 'correct' : 'wrong');
-  byId('quiz-score').textContent = quizCorrect + ' / ' + quizDeck.length + ' correct';
+  updateQuizProgress();
   const moveFocus = document.activeElement === button;
   for (const remaining of quizBank.children) remaining.disabled = true;
   advanceTimer = setTimeout(() => {
