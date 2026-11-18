@@ -35,6 +35,7 @@ button:focus-visible,select:focus-visible{outline:3px solid #271273;outline-offs
 main{max-width:1440px;margin:auto;padding:32px clamp(14px,4vw,58px) 22px}
 header{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:25px}
 .brand{display:flex;align-items:center;gap:15px}
+.logo-button{display:block;flex:none;border:0;padding:0;background:transparent;border-radius:20px;touch-action:manipulation}
 .emblem{display:block;width:62px;height:62px;border-radius:20px;box-shadow:0 5px 0 var(--accent-shadow);flex:none}
 h1,h2,p{margin:0}
 h1{font-size:clamp(2rem,5vw,3.55rem);line-height:1.05;letter-spacing:-.065em}
@@ -113,13 +114,14 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid var(--control-b
 .mode:hover{background:var(--control-hover);color:var(--ink)}
 .mode[aria-selected=true]{background:var(--accent);border-color:var(--accent-border);color:var(--accent-ink)}
 .flashcard-modes{max-width:720px;margin:0 auto 14px;display:flex;flex-wrap:wrap;gap:8px}
-.flashcard-modes button[aria-pressed=true]{background:var(--accent);border-color:var(--accent-border);color:var(--accent-ink)}
+.flashcard-modes button[aria-pressed=true],.matching-modes button[aria-pressed=true]{background:var(--accent);border-color:var(--accent-border);color:var(--accent-ink)}
 .quiz-choice{padding-inline:10px}
 .quiz-choice:disabled{cursor:default}
 .chip.choice-correct{background:#28483b;border-color:#5d9476;color:#d0f4db}
 .chip.choice-wrong{background:#583a39;border-color:#af7667;color:#ffdaca}
 .narration-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px}
 .narration-status{font-size:.85rem;color:var(--muted)}
+.matching-modes{display:flex;gap:8px;margin-bottom:14px}
 .quiz-progress{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
 .quiz-prompt{cursor:default}
 .quiz-prompt:hover{background:var(--card)}
@@ -135,6 +137,16 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid var(--control-b
 [hidden]{display:none!important}
 footer{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 18px;margin-top:14px;text-align:center;font-size:.75rem;color:var(--muted)}
 footer a{color:inherit}
+.review-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
+.review-header a{display:inline-flex;align-items:center;color:var(--ink);text-decoration:none}
+.review-list{list-style:none;padding:0;margin:0}
+.review-list li{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.review-list li:last-child{border-bottom:0}
+.review-list li span{flex:1;min-width:105px}
+.review-list button:disabled{opacity:.55;cursor:default}
+#review-status:empty{display:none}
+#review-status{margin-bottom:12px;color:var(--muted)}
+
 @media(min-width:801px){
   .board{align-items:stretch}
   .bank-panel{display:flex;flex-direction:column}
@@ -157,15 +169,19 @@ footer a{color:inherit}
 </style>
 </head>
 <body>
-<main>
+<main id="game-page">
   <header>
-    <div class="brand"><img class="emblem" src="apple-touch-icon.png" width="62" height="62" alt=""><div><h1>Capital Quest</h1><p class="subtitle" id="subtitle">Match each capital to its U.S. state.</p></div></div>
+    <div class="brand"><button type="button" class="logo-button" id="logo-button" aria-label="Capital Quest logo"><img class="emblem" src="apple-touch-icon.png" width="62" height="62" alt=""></button><div><h1>Capital Quest</h1><p class="subtitle" id="subtitle">Match each capital to its U.S. state.</p></div></div>
   </header>
   <div class="modes" role="tablist" aria-label="Game mode">
     <button type="button" class="mode" id="matching-tab" role="tab" aria-selected="true" aria-controls="matching-panel">Matching</button>
     <button type="button" class="mode" id="flashcards-tab" role="tab" aria-selected="false" aria-controls="flashcards-panel" tabindex="-1">Flashcards</button>
   </div>
   <div id="matching-panel" role="tabpanel" aria-labelledby="matching-tab">
+  <div class="matching-modes" role="group" aria-label="Matching activity">
+    <button type="button" class="restart" id="match-capitals" aria-pressed="true">Capitals</button>
+    <button type="button" class="restart" id="match-states" aria-pressed="false">States</button>
+  </div>
   <div class="scoreboard" aria-label="Game progress">
     <span class="metric"><strong id="score">0/50</strong> matched</span>
     <progress id="progress" class="progress" value="0" max="50" aria-label="States matched"></progress>
@@ -179,7 +195,7 @@ footer a{color:inherit}
         <svg id="map" viewBox="0 0 1050 614" aria-label="Interactive map of the 50 U.S. states" role="group"></svg>
       </div>
       <div class="small-states" id="small-states" role="group" aria-label="Small state shortcuts"></div>
-      <div class="state-picker"><label for="state-list">Or choose a state by name</label><select id="state-list"><option value="">Choose a state…</option></select><a class="restart word-bank-link" href="#bank-heading">Word bank ↓</a></div>
+      <div class="state-picker"><label id="state-list-label" for="state-list">Or choose a state by name</label><select id="state-list"><option value="">Choose a state…</option></select><a class="restart word-bank-link" href="#bank-heading">Word bank ↓</a></div>
     </section>
     <section class="panel bank-panel" aria-labelledby="bank-heading">
       <div class="panel-heading"><h2 id="bank-heading">Capital word bank</h2><button type="button" id="restart" class="restart">↻ Restart</button></div>
@@ -262,6 +278,16 @@ footer a{color:inherit}
       <button type="button" class="theme-swatch" data-theme="solarized" aria-label="Solarized" title="Solarized" aria-pressed="false"></button>
     </div>
   </footer>
+</main>
+<main id="audio-review" hidden>
+  <header class="review-header">
+    <h1 id="review-heading" tabindex="-1">Audio clips</h1>
+    <a class="restart" href="#">← Back to Capital Quest</a>
+  </header>
+  <section class="panel" aria-labelledby="review-heading">
+    <p id="review-status" role="status"></p>
+    <ul class="review-list" id="review-list"></ul>
+  </section>
 </main>
 <script>
 'use strict';
@@ -366,7 +392,9 @@ const smallStates = ['CT','DE','MD','MA','NH','NJ','RI','VT'];
 const calloutOrder = ['VT','NH','MA','RI','CT','NJ','DE','MD'];
 const shortcuts = byId('small-states');
 const shortcutButtons = new Map();
-const matched = new Set();
+const matchingRounds = new Map();
+let matchStates = false;
+let matched = new Set();
 const mapButtons = new Map();
 const capitalButtons = new Map();
 let choice = null;
@@ -396,14 +424,22 @@ function clearMistake() {
   missed = null;
 }
 
+function matchingItem(state) {
+  return matchStates ? state.name : state.capital;
+}
+
+function matchingSubtitle() {
+  return matchStates ? 'Find each state on the unlabeled U.S. map.' : 'Match each capital to its U.S. state.';
+}
+
 function selectCapital(code) {
   if (matched.has(code)) return;
   if (choice) capitalButtons.get(choice).setAttribute('aria-pressed','false');
   choice = code;
   clearMistake();
   if (code) capitalButtons.get(code).setAttribute('aria-pressed','true');
-  announce(code ? byCode.get(code).capital + ' selected. Choose its state.' :
-    'Pick a capital from the word bank.');
+  announce(code ? matchingItem(byCode.get(code)) + ' selected. Choose its location.' :
+    (matchStates ? 'Pick a state from the word bank.' : 'Pick a capital from the word bank.'));
 }
 
 function updateScore() {
@@ -416,11 +452,13 @@ function updateScore() {
 function tryMatch(code) {
   const state = byCode.get(code);
   if (matched.has(code)) {
-    announce(state.name + ' already matched with ' + state.capital + '.', 'correct');
+    announce(matchStates ? state.name + ' is already matched.' :
+      state.name + ' already matched with ' + state.capital + '.', 'correct');
     return;
   }
   if (!choice) {
-    announce('Pick a capital first, then choose its state.');
+    announce(matchStates ? 'Pick a state name first, then find it on the map.' :
+      'Pick a capital first, then choose its state.');
     return;
   }
   clearMistake();
@@ -430,7 +468,8 @@ function tryMatch(code) {
     missed = code;
     mapButtons.get(code).classList.add('miss');
     shortcutButtons.get(code)?.classList.add('miss');
-    announce(byCode.get(choice).capital + ' isn’t the capital of ' + state.name + '. Try another state!', 'wrong');
+    announce(matchStates ? 'That isn’t ' + byCode.get(choice).name + '. Try another location!' :
+      byCode.get(choice).capital + ' isn’t the capital of ' + state.name + '. Try another state!', 'wrong');
     updateScore();
     return;
   }
@@ -442,30 +481,37 @@ function tryMatch(code) {
   matched.add(code);
   streak++;
   bestStreak = Math.max(streak,bestStreak);
+  markMatched(state);
+  updateScore();
+  if (matched.size === 50) {
+    announce('You matched all 50 states!', 'complete');
+    byId('results').textContent = 'Best streak: ' + bestStreak + ' · ' + guesses + ' total guesses';
+    byId('finish').hidden = false;
+    bank.hidden = true;
+    if (moveFocus) byId('again').focus();
+  } else {
+    announce(matchStates ? 'Correct! That’s ' + state.name + '.' :
+      'Correct! ' + state.capital + ' is the capital of ' + state.name + '.', 'correct');
+    if (moveFocus) nextCapital.focus();
+  }
+}
+
+function markMatched(state) {
+  const {code} = state;
   const target = mapButtons.get(code);
   target.classList.add('done');
-  target.setAttribute('aria-label',state.name + ', matched with ' + state.capital);
-  target.querySelector('title').textContent = state.name + ' · ' + state.capital;
+  target.setAttribute('aria-label',matchStates ? state.name + ', matched' : state.name + ', matched with ' + state.capital);
+  const title = target.querySelector('title');
+  title.textContent = matchStates ? state.name : state.name + ' · ' + state.capital;
   const label = target.querySelector('text');
   if (label) label.textContent = state.code + '✓';
   const shortcut = shortcutButtons.get(code);
   if (shortcut) {
     shortcut.classList.add('done');
     shortcut.textContent = state.code + '✓';
-    shortcut.setAttribute('aria-label', state.name + ', matched with ' + state.capital);
+    shortcut.setAttribute('aria-label', matchStates ? state.name + ', matched' : state.name + ', matched with ' + state.capital);
   }
   stateList.querySelector('option[value="' + code + '"]').disabled = true;
-  updateScore();
-  if (matched.size === 50) {
-    announce(state.capital + ' matches ' + state.name + '. You matched all 50 states!', 'complete');
-    byId('results').textContent = 'Best streak: ' + bestStreak + ' · ' + guesses + ' total guesses';
-    byId('finish').hidden = false;
-    bank.hidden = true;
-    if (moveFocus) byId('again').focus();
-  } else {
-    announce('Correct! ' + state.capital + ' is the capital of ' + state.name + '.', 'correct');
-    if (moveFocus) nextCapital.focus();
-  }
 }
 
 function buildMap() {
@@ -473,7 +519,7 @@ function buildMap() {
     const shape = svg('g',{'data-state':state.code,'data-region':regions.findIndex(region => region.includes(state.code)),
       class:'state',tabindex:'0',role:'button','aria-label':state.name});
     const title = svg('title',{});
-    title.textContent = state.name;
+    title.textContent = matchStates ? "" : state.name;
     shape.append(title, svg('path',{d:state.shape}));
     if (!smallStates.includes(state.code)) addLabel(shape,state,state.center);
     map.append(shape);
@@ -488,38 +534,42 @@ function buildMap() {
     const [anchorX, anchorY] = state.center;
     shape.append(svg('line',{class:'map-leader',x1:anchorX,y1:anchorY,x2:989,y2:y}));
     shape.append(svg('rect',{x:989,y:y-13,width:53,height:26,rx:5}));
-    addLabel(shape,state,[1015,y]);
+    addLabel(shape,state,[1015,y],index + 1);
   }
   shortcuts.replaceChildren();
   shortcutButtons.clear();
   const heading = document.createElement('span');
   heading.textContent = 'Small states';
   shortcuts.append(heading);
-  for (const code of smallStates) {
+  for (const code of matchStates ? calloutOrder : smallStates) {
     const state = byCode.get(code);
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'small-state';
     button.dataset.state = code;
-    button.textContent = code;
+    button.textContent = matchStates ? calloutOrder.indexOf(code) + 1 : code;
     button.setAttribute('aria-label',state.name);
-    button.title = state.name;
+    if (!matchStates) button.title = state.name;
     shortcuts.append(button);
     shortcutButtons.set(code,button);
   }
 }
 
-function addLabel(shape,state,[x,y]) {
+function addLabel(shape,state,[x,y],callout = "") {
   const label = svg('text',{x,y,'aria-hidden':'true'});
-  label.textContent = state.code;
+  label.textContent = matchStates ? callout : state.code;
   shape.append(label);
 }
 
 function reset() {
-  matched.clear();
+  matched = new Set();
+  streak = bestStreak = guesses = 0;
+  drawMatchingRound();
+}
+
+function drawMatchingRound() {
   choice = null;
   clearMistake();
-  streak = bestStreak = guesses = 0;
   map.replaceChildren();
   showStateName(null);
   stateList.length = 1;
@@ -528,7 +578,11 @@ function reset() {
   buildMap();
   capitalButtons.clear();
   bank.replaceChildren();
-  for (const state of capitals) {
+  for (const state of matchStates ? states : capitals) {
+    if (matched.has(state.code)) {
+      markMatched(state);
+      continue;
+    }
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'chip';
@@ -539,22 +593,49 @@ function reset() {
     handle.setAttribute('aria-hidden','true');
     handle.textContent = '⠿';
     const label = document.createElement('span');
-    label.textContent = state.capital;
+    label.textContent = matchingItem(state);
     button.append(handle,label);
     bank.append(button);
     capitalButtons.set(state.code,button);
   }
-  bank.hidden = false;
+  const complete = matched.size === states.length;
+  bank.hidden = complete;
   bank.scrollTop = 0;
-  byId('finish').hidden = true;
+  byId('finish').hidden = !complete;
+  byId('results').textContent = 'Best streak: ' + bestStreak + ' · ' + guesses + ' total guesses';
   updateScore();
-  announce('Pick a capital from the word bank to begin.');
+  announce(complete ? 'You matched all 50 states!' :
+    (matchStates ? 'Pick a state from the word bank to begin.' : 'Pick a capital from the word bank to begin.'),
+    complete ? 'complete' : '');
 }
+
+function chooseMatchingActivity(statesMode) {
+  if (matchStates === statesMode) return;
+  matchingRounds.set(matchStates, {matched, streak, bestStreak, guesses});
+  matchStates = statesMode;
+  const round = matchingRounds.get(matchStates) ?? {matched:new Set(), streak:0, bestStreak:0, guesses:0};
+  ({matched, streak, bestStreak, guesses} = round);
+  byId('match-capitals').setAttribute('aria-pressed', String(!matchStates));
+  byId('match-states').setAttribute('aria-pressed', String(matchStates));
+  byId('subtitle').textContent = matchingSubtitle();
+  byId('bank-heading').textContent = matchStates ? 'State word bank' : 'Capital word bank';
+  byId('instructions').textContent = matchStates
+    ? 'Tap a state name, then find its outline on the map. You can also drag by the ⠿ handle.'
+    : 'Tap a capital, then tap a state. You can also drag a capital by its ⠿ handle.';
+  bank.setAttribute('aria-label', matchStates ? 'Unmatched states' : 'Unmatched capitals');
+  stateList.hidden = matchStates;
+  byId('state-list-label').hidden = matchStates;
+  drawMatchingRound();
+}
+
+byId('match-capitals').addEventListener('click', () => chooseMatchingActivity(false));
+byId('match-states').addEventListener('click', () => chooseMatchingActivity(true));
 
 const stateName = byId('state-name');
 function showStateName(target) {
-  stateName.hidden = !target;
-  stateName.textContent = target ? byCode.get(target.dataset.state).name : '';
+  const show = target && (!matchStates || matched.has(target.dataset.state));
+  stateName.hidden = !show;
+  stateName.textContent = show ? byCode.get(target.dataset.state).name : '';
 }
 
 for (const group of [map,shortcuts]) {
@@ -601,7 +682,7 @@ bank.addEventListener('click', event => {
   selectCapital(choice === button.dataset.capital ? null : button.dataset.capital);
   if (!choice) return;
   if (event.detail === 0) {
-    stateList.focus();
+    (matchStates ? map.querySelector('.state:not(.done)') : stateList).focus();
     return;
   }
   const stackedTouch = matchMedia('(max-width:900px) and (pointer:coarse)').matches;
@@ -690,7 +771,7 @@ function chooseMode(tab) {
   const isMatching = tab === modeTabs[0];
   if (isMatching) stopNarration();
   byId('subtitle').textContent = isMatching
-    ? 'Match each capital to its U.S. state.'
+    ? matchingSubtitle()
     : flashcardSubtitle();
 }
 
@@ -749,6 +830,7 @@ const quizMode = byId('quiz-mode');
 const narratedMode = byId('narrated-mode');
 const narrationControls = byId('narration-controls');
 const narrationStatus = byId('narration-status');
+const narrationRate = 0.85;
 const narration = new Audio();
 narration.preload = 'none';
 let narrated = false;
@@ -786,14 +868,18 @@ function quizResult() {
     : {percent, title:'Keep Practicing — You Can Do It!', clip:'keep-practicing'};
 }
 
+function quizAudioSource(clip, isEnding) {
+  return 'audio/quiz/' + clip + '.mp3' + (isEnding ? '?v=2' : '');
+}
+
 async function playQuestion() {
   stopNarration();
-  if (!narrated || !quizStarted || byId('flashcards-panel').hidden) return;
+  if (!narrated || !quizStarted || byId('flashcards-panel').hidden || !byId('audio-review').hidden) return;
   const attempt = narrationAttempt;
   const finished = quizIndex === quizDeck.length;
   const clip = finished ? quizResult().clip : quizDeck[quizIndex].code.toLowerCase();
-  narration.src = 'audio/quiz/' + clip + '.mp3' + (finished ? '?v=2' : '');
-  narration.playbackRate = 0.85;
+  narration.src = quizAudioSource(clip, finished);
+  narration.playbackRate = narrationRate;
   try {
     await narration.play();
   } catch (error) {
@@ -941,6 +1027,98 @@ fillCapitalChoices(studyBank);
 showStudyQuestion();
 
 reset();
+
+const logo = byId('logo-button');
+const reviewPage = byId('audio-review');
+const gamePage = byId('game-page');
+const reviewList = byId('review-list');
+const reviewStatus = byId('review-status');
+const reviewAudio = new Audio();
+reviewAudio.preload = 'none';
+let logoClicks = [];
+let playingClip = null;
+
+document.addEventListener('click', event => {
+  if (!logo.contains(event.target)) {
+    logoClicks = [];
+    return;
+  }
+  const now = performance.now();
+  logoClicks = logoClicks.filter(time => now - time <= 10000);
+  logoClicks.push(now);
+  if (logoClicks.length === 20) {
+    logoClicks = [];
+    location.hash = 'audio-review';
+  }
+});
+
+function stopReview() {
+  reviewAudio.pause();
+  if (playingClip) playingClip.stop.disabled = true;
+  playingClip = null;
+  reviewStatus.textContent = '';
+}
+
+function buildReviewList() {
+  const clips = states.map(state => [state.name, quizAudioSource(state.code.toLowerCase(), false)]);
+  clips.push(
+    ['Great Job! — Beefcake', quizAudioSource('great-job', true)],
+    ['Keep Practicing — Potpie', quizAudioSource('keep-practicing', true)]
+  );
+  for (const [name, src] of clips) {
+    const row = document.createElement('li');
+    const label = document.createElement('span');
+    label.textContent = name;
+    const play = document.createElement('button');
+    const stop = document.createElement('button');
+    for (const [button, action] of [[play,'Play'],[stop,'Stop']]) {
+      button.type = 'button';
+      button.className = 'restart';
+      button.textContent = action;
+      button.setAttribute('aria-label', action + ' ' + name);
+    }
+    stop.disabled = true;
+    play.addEventListener('click', () => {
+      stopReview();
+      const current = {stop};
+      playingClip = current;
+      stop.disabled = false;
+      reviewAudio.src = src;
+      reviewAudio.playbackRate = narrationRate;
+      reviewStatus.textContent = 'Playing ' + name;
+      reviewAudio.play().catch(() => {
+        if (playingClip !== current) return;
+        stopReview();
+        reviewStatus.textContent = 'Unable to play ' + name + '.';
+      });
+    });
+    stop.addEventListener('click', () => {
+      stopReview();
+      play.focus({preventScroll:true});
+    });
+    row.append(label,play,stop);
+    reviewList.append(row);
+  }
+}
+reviewAudio.addEventListener('ended', stopReview);
+
+function showRequestedPage() {
+  const showReview = location.hash === '#audio-review';
+  if (showReview === !reviewPage.hidden) return;
+  gamePage.hidden = showReview;
+  reviewPage.hidden = !showReview;
+  if (showReview) {
+    stopNarration();
+    if (!reviewList.firstElementChild) buildReviewList();
+    window.scrollTo(0,0);
+    byId('review-heading').focus({preventScroll:true});
+  } else {
+    stopReview();
+    logo.focus({preventScroll:true});
+  }
+}
+window.addEventListener('hashchange', showRequestedPage);
+showRequestedPage();
 </script>
 </body>
 </html>
