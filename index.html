@@ -133,6 +133,23 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid var(--control-b
 .celebration-banner::before,.celebration-banner::after{content:"";position:absolute;top:24%;width:34px;height:82%;background:#732576}
 .celebration-banner::before{right:100%;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,26% 50%)}
 .celebration-banner::after{left:100%;clip-path:polygon(0 0,100% 0,74% 50%,100% 100%,0 100%)}
+.celebration-character{
+  position:absolute;z-index:1;left:50%;top:calc(35% + clamp(39px,5.5vw,74px));
+  width:clamp(88px,min(24vw,23vh),174px);height:auto;
+  filter:drop-shadow(0 5px 5px #1c0e3280);
+  animation:character-walk 2.1s linear infinite,character-fade 8.4s both;
+}
+@keyframes character-walk{
+  0%,100%{transform:translate(-68%,0) rotate(-3deg)}
+  12.5%{transform:translate(-59%,-3px) rotate(1deg)}
+  25%{transform:translate(-50%,0) rotate(-3deg)}
+  37.5%{transform:translate(-41%,-3px) rotate(1deg)}
+  50%{transform:translate(-32%,0) rotate(3deg)}
+  62.5%{transform:translate(-41%,-3px) rotate(-1deg)}
+  75%{transform:translate(-50%,0) rotate(3deg)}
+  87.5%{transform:translate(-59%,-3px) rotate(-1deg)}
+}
+@keyframes character-fade{0%,100%{opacity:0}8%,89%{opacity:1}}
 @keyframes party-banner{
   0%{transform:translate(-50%,-50%) scale(.72) rotate(-5deg);opacity:0}
   7%{transform:translate(-50%,-50%) scale(1.06) rotate(2deg);opacity:1}
@@ -1203,6 +1220,12 @@ function showCelebration() {
   banner.textContent = 'Great Job!';
   banner.addEventListener('animationend', () => banner.remove(), {once:true});
   decorations.append(banner);
+  const character = document.createElement('img');
+  character.className = 'celebration-character';
+  character.src = 'celebration-cartman.png';
+  character.alt = '';
+  character.addEventListener('animationend', () => character.remove(), {once:true});
+  decorations.append(character);
   const confettiCount = 96;
   const balloonCount = 24;
   for (let index = 0; index < confettiCount + balloonCount; index++) {
