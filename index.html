@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#211c30">
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <title>Capital Quest | U.S. State Capitals Game</title>
 <style>
 :root{color-scheme:dark;font:16px/1.45 system-ui,sans-serif;
@@ -33,7 +35,7 @@ button:focus-visible,select:focus-visible{outline:3px solid #271273;outline-offs
 main{max-width:1440px;margin:auto;padding:32px clamp(14px,4vw,58px) 22px}
 header{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:25px}
 .brand{display:flex;align-items:center;gap:15px}
-.emblem{display:grid;place-items:center;border-radius:20px;background:var(--accent);color:var(--accent-ink);width:62px;height:62px;font-size:38px;box-shadow:0 5px 0 var(--accent-shadow);flex:none}
+.emblem{display:block;width:62px;height:62px;border-radius:20px;box-shadow:0 5px 0 var(--accent-shadow);flex:none}
 h1,h2,p{margin:0}
 h1{font-size:clamp(2rem,5vw,3.55rem);line-height:1.05;letter-spacing:-.065em}
 .subtitle{color:var(--muted);margin-top:7px}
@@ -150,13 +152,13 @@ footer a{color:inherit}
   #map .state text{font-size:23px}
   .bank-note{line-height:1.3}
 }
-@media(max-width:460px){.brand{gap:10px}.emblem{width:43px;height:43px;border-radius:12px;font-size:26px}.subtitle{font-size:.82rem}.scoreboard{gap:12px;padding:10px 13px}.restart{padding:7px 9px;font-size:.84rem}header{gap:7px}.progress{min-width:24px}.metric{font-size:.75rem}.metric strong{font-size:1.05rem}.state-picker{margin-top:8px}.feedback{min-height:44px}.panel-heading{margin-bottom:7px}}
+@media(max-width:460px){.brand{gap:10px}.emblem{width:43px;height:43px;border-radius:12px}.subtitle{font-size:.82rem}.scoreboard{gap:12px;padding:10px 13px}.restart{padding:7px 9px;font-size:.84rem}header{gap:7px}.progress{min-width:24px}.metric{font-size:.75rem}.metric strong{font-size:1.05rem}.state-picker{margin-top:8px}.feedback{min-height:44px}.panel-heading{margin-bottom:7px}}
 </style>
 </head>
 <body>
 <main>
   <header>
-    <div class="brand"><span class="emblem" aria-hidden="true">✦</span><div><h1>Capital Quest</h1><p class="subtitle" id="subtitle">Match each capital to its U.S. state.</p></div></div>
+    <div class="brand"><img class="emblem" src="apple-touch-icon.png" width="62" height="62" alt=""><div><h1>Capital Quest</h1><p class="subtitle" id="subtitle">Match each capital to its U.S. state.</p></div></div>
   </header>
   <div class="modes" role="tablist" aria-label="Game mode">
     <button type="button" class="mode" id="matching-tab" role="tab" aria-selected="true" aria-controls="matching-panel">Matching</button>
