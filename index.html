@@ -328,9 +328,9 @@ footer a{color:inherit}
     </div>
   </footer>
 </main>
-<main id="audio-review" hidden>
+<main id="assets-audios" hidden>
   <header class="review-header">
-    <h1 id="review-heading" tabindex="-1">Audio clips</h1>
+    <h1 id="review-heading" tabindex="-1">Assets and Audios</h1>
     <div class="review-actions">
       <button type="button" class="restart" id="preview-celebration">Preview celebration</button>
       <a class="restart" href="#">← Back to Capital Quest</a>
@@ -1102,7 +1102,7 @@ function quizAudioSource(clip, isEnding) {
 
 async function playQuestion() {
   stopNarration();
-  if (!narrated || !quizStarted || quizPanel.hidden || byId('quizzes-panel').hidden || !byId('audio-review').hidden) return;
+  if (!narrated || !quizStarted || quizPanel.hidden || byId('quizzes-panel').hidden || !byId('assets-audios').hidden) return;
   const attempt = narrationAttempt;
   const finished = quizIndex === quizDeck.length;
   const clip = finished ? quizResult().clip : quizDeck[quizIndex].code.toLowerCase();
@@ -1185,12 +1185,12 @@ function celebrateQuiz() {
   if (quizResult().percent < 80) return;
   celebrationTimer = setTimeout(() => {
     const restoreFocus = !quizPanel.hidden && !byId('quizzes-panel').hidden &&
-      byId('audio-review').hidden && quizPanel.contains(document.activeElement);
+      byId('assets-audios').hidden && quizPanel.contains(document.activeElement);
     resetQuiz();
     if (restoreFocus) startQuiz.focus({preventScroll:true});
   }, 9000);
 
-  if (quizPanel.hidden || byId('quizzes-panel').hidden || !byId('audio-review').hidden ||
+  if (quizPanel.hidden || byId('quizzes-panel').hidden || !byId('assets-audios').hidden ||
       matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   showCelebration();
 }
@@ -1287,7 +1287,7 @@ function answerMapQuiz(code) {
     }
     showMapQuizResult();
     if (quizResult(matched.size).percent < 80) return;
-    if (!byId('quizzes-panel').hidden && !byId('quiz-map').hidden && byId('audio-review').hidden &&
+    if (!byId('quizzes-panel').hidden && !byId('quiz-map').hidden && byId('assets-audios').hidden &&
         !matchMedia('(prefers-reduced-motion: reduce)').matches) showCelebration();
     mapResetTimer = setTimeout(reset,9000);
   },quizFeedbackDuration);
@@ -1376,8 +1376,9 @@ showStudyQuestion();
 byId('practice-map').append(matchingGame);
 reset();
 
+const gameTitle = document.title;
 const logo = byId('logo-button');
-const reviewPage = byId('audio-review');
+const reviewPage = byId('assets-audios');
 const gamePage = byId('game-page');
 const reviewList = byId('review-list');
 const reviewStatus = byId('review-status');
@@ -1396,7 +1397,7 @@ document.addEventListener('click', event => {
   logoClicks.push(now);
   if (logoClicks.length === 20) {
     logoClicks = [];
-    location.hash = 'audio-review';
+    location.hash = 'assets-audios';
   }
 });
 
@@ -1451,11 +1452,13 @@ function buildReviewList() {
 reviewAudio.addEventListener('ended', stopReview);
 
 function showRequestedPage() {
-  const showReview = location.hash === '#audio-review';
+  if (location.hash === '#audio-review') history.replaceState(history.state,'','#assets-audios');
+  const showReview = location.hash === '#assets-audios';
   if (showReview === !reviewPage.hidden) return;
   celebration.replaceChildren();
   gamePage.hidden = showReview;
   reviewPage.hidden = !showReview;
+  document.title = showReview ? 'Assets and Audios | Capital Quest' : gameTitle;
   if (showReview) {
     stopNarration();
     if (!reviewList.firstElementChild) buildReviewList();
