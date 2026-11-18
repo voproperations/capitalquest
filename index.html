@@ -194,6 +194,26 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid var(--control-b
 [hidden]{display:none!important}
 footer{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 18px;margin-top:14px;text-align:center;font-size:.75rem;color:var(--muted)}
 footer a{color:inherit}
+.results-page>h2{margin:20px 0 10px}
+.results-page>h2:first-child{margin-top:0}
+.results-page .panel+.panel{margin-top:12px}
+.result-summary{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;color:var(--muted);font-size:.9rem;margin:8px 0 12px}
+.result-trend[data-trend=up]{color:#bdebaf}
+.result-trend[data-trend=down]{color:#ffc4b3}
+.result-detail{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+.result-figure{min-width:0;margin:0}
+.result-chart{display:block;width:100%;height:auto}
+.result-chart text{fill:var(--muted);font:13px system-ui,sans-serif}
+.result-chart line{stroke:var(--line);stroke-width:1}
+.result-chart polyline{fill:none;stroke:var(--focus);stroke-width:2.5;stroke-linejoin:round}
+.result-chart circle{fill:var(--focus);stroke:var(--panel);stroke-width:1}
+.result-history{max-height:265px;overflow:auto}
+.result-history table{width:100%;border-collapse:collapse;font-size:.9rem}
+.result-history th,.result-history td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
+.result-history th:last-child,.result-history td:last-child{text-align:right;white-space:nowrap}
+.result-history th{position:sticky;top:0;background:var(--panel)}
+.result-empty,.result-warning{color:var(--muted);margin-top:8px}
+@media(max-width:800px){.result-detail{grid-template-columns:1fr;gap:12px}}
 .review-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
 .review-actions{display:flex;flex-wrap:wrap;gap:8px}
 .review-header a{display:inline-flex;align-items:center;color:var(--ink);text-decoration:none}
@@ -235,6 +255,7 @@ footer a{color:inherit}
     <button type="button" class="mode" id="matching-tab" role="tab" aria-selected="true" aria-controls="matching-panel">Matching</button>
     <button type="button" class="mode" id="flashcards-tab" role="tab" aria-selected="false" aria-controls="flashcards-panel" tabindex="-1">Flashcards</button>
     <button type="button" class="mode" id="quizzes-tab" role="tab" aria-selected="false" aria-controls="quizzes-panel" tabindex="-1">Quizzes</button>
+    <button type="button" class="mode" id="results-tab" role="tab" aria-selected="false" aria-controls="results-panel" tabindex="-1">Quiz Results</button>
   </div>
   <div id="matching-panel" role="tabpanel" aria-labelledby="matching-tab">
   <div class="matching-modes" role="group" aria-label="Matching activity">
@@ -339,6 +360,14 @@ footer a{color:inherit}
       </section>
     </div>
   </div>
+  <section id="results-panel" class="results-page" role="tabpanel" aria-labelledby="results-tab" hidden>
+    <h2>Flashcards</h2>
+    <p class="result-warning" id="result-warning" role="status" hidden></p>
+    <section class="panel" id="flashcard-results" aria-label="Flashcard quiz results"></section>
+    <h2>Matching</h2>
+    <section class="panel" id="capital-map-results" aria-label="Capital Map quiz results"></section>
+    <section class="panel" id="state-map-results" aria-label="State Map quiz results"></section>
+  </section>
   <footer>
     <p>Map data from the <a href="https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html">U.S. Census Bureau</a> via <a href="https://github.com/topojson/us-atlas">U.S. Atlas</a>.</p>
     <div class="theme-picker" role="group" aria-label="Color themes">
@@ -998,7 +1027,7 @@ function swallowDragClick(event) {
 }
 window.addEventListener('pointerup',endDrag);
 window.addEventListener('pointercancel',endDrag);
-const modeTabs = [byId('matching-tab'), byId('flashcards-tab'), byId('quizzes-tab')];
+const modeTabs = [byId('matching-tab'), byId('flashcards-tab'), byId('quizzes-tab'), byId('results-tab')];
 const card = byId('card');
 const previousCard = byId('previous-card');
 const nextCard = byId('next-card');
@@ -1022,8 +1051,12 @@ function chooseMode(tab) {
   } else if (tab === modeTabs[1]) {
     stopNarration();
     byId('subtitle').textContent = 'Practice with the word bank or flip the card to check.';
-  } else {
+  } else if (tab === modeTabs[2]) {
     chooseQuizType(quizType);
+  } else {
+    stopNarration();
+    byId('subtitle').textContent = 'Review quiz scores saved in this browser.';
+    renderQuizResults();
   }
 }
 
@@ -1306,6 +1339,7 @@ function answerMapQuiz(code) {
   chip.disabled = true;
   guesses++;
   if (correct) matched.add(selected);
+  if (attempted.size === states.length) recordQuizResult(matchStates ? 'state-map' : 'capital-map', matched.size);
   streak = correct ? streak+1 : 0;
   bestStreak = Math.max(streak,bestStreak);
   updateScore();
@@ -1384,6 +1418,7 @@ quizBank.addEventListener('click', event => {
   const isCorrect = button.dataset.answer === state.code;
   if (isCorrect) quizCorrect++;
   else button.classList.add('choice-wrong');
+  if (quizIndex === quizDeck.length - 1) recordQuizResult(narrated ? 'narrated' : 'cards', quizCorrect);
   setFlashcardFeedback(quizFeedback, isCorrect ? 'Correct!' : 'Incorrect.',
     isCorrect ? 'correct' : 'wrong');
   updateQuizProgress();
@@ -1407,6 +1442,167 @@ showStudyQuestion();
 
 byId('practice-map').append(matchingGame);
 reset();
+
+const quizResultPrefix = 'capitalQuest.result.';
+const sessionQuizResults = new Map();
+const quizResultNames = {
+  cards:'Capital Cards',
+  narrated:'Narrated Cards',
+  'capital-map':'Capital Map',
+  'state-map':'State Map'
+};
+let quizResultsStorageLimited = false;
+const scoreDateFormat = new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'});
+
+function recordQuizResult(type, correct) {
+  const timestamp = Date.now();
+  const id = globalThis.crypto?.randomUUID?.() ?? timestamp + '-' + Math.random().toString(36).slice(2);
+  const result = {type,correct,total:states.length,timestamp};
+  const key = quizResultPrefix + id;
+  try {
+    localStorage.setItem(key,JSON.stringify(result));
+  } catch {
+    sessionQuizResults.set(key,result);
+    quizResultsStorageLimited = true;
+  }
+}
+
+function loadQuizResults() {
+  const results = new Map(sessionQuizResults);
+  try {
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith(quizResultPrefix) || results.has(key)) continue;
+      let saved;
+      try { saved = JSON.parse(localStorage.getItem(key)); } catch { continue; }
+      if (saved && Object.hasOwn(quizResultNames,saved.type) &&
+          Number.isInteger(saved.correct) && Number.isInteger(saved.total) &&
+          saved.total > 0 && saved.correct >= 0 && saved.correct <= saved.total &&
+          Number.isFinite(saved.timestamp) && Math.abs(saved.timestamp) <= 8.64e15) results.set(key,saved);
+    }
+  } catch {
+    quizResultsStorageLimited = true;
+  }
+  return [...results.values()].sort((first,last) => first.timestamp-last.timestamp);
+}
+
+function resultNode(tag, text, className) {
+  const node = document.createElement(tag);
+  if (text) node.textContent = text;
+  if (className) node.className = className;
+  return node;
+}
+
+function resultPercent(result) {
+  return 100*result.correct/result.total;
+}
+
+function formatPercent(value) {
+  return Number(value.toFixed(1)) + '%';
+}
+
+function buildResultChart(results) {
+  const figure = resultNode('figure',null,'result-figure');
+  const chart = svg('svg',{class:'result-chart',viewBox:'0 0 420 192',role:'img',
+    'aria-label':'Scores by attempt, oldest to newest. Each point is an actual quiz score.'});
+  const xStart = 43, xEnd = 400, yTop = 17, yBottom = 150;
+  const label = (x,y,text,anchor) => {
+    const node = svg('text',{x,y,'text-anchor':anchor});
+    node.textContent = text;
+    chart.append(node);
+  };
+  const yAt = score => yBottom - score/100*(yBottom-yTop);
+  for (const tick of [0,25,50,75,100]) {
+    const y = yAt(tick);
+    chart.append(svg('line',{x1:xStart,y1:y,x2:xEnd,y2:y}));
+    label(xStart-7,y+4,tick+'%','end');
+  }
+  const points = results.map((result,index) => [
+    results.length === 1 ? (xStart+xEnd)/2 : xStart + (xEnd-xStart)*index/(results.length-1),
+    yAt(resultPercent(result))
+  ]);
+  if (points.length > 1) chart.append(svg('polyline',{points:points.map(pair=>pair.join(',')).join(' ')}));
+  for (const [index,[x,y]] of points.entries()) {
+    const dot = svg('circle',{cx:x,cy:y,r:results.length>30?2:4});
+    const title = svg('title',{});
+    title.textContent = 'Attempt ' + (index+1) + ': ' + formatPercent(resultPercent(results[index]));
+    dot.append(title);
+    chart.append(dot);
+  }
+  if (results.length === 1) label(points[0][0],yBottom+20,'1','middle');
+  else {
+    label(xStart,yBottom+20,'1','start');
+    label(xEnd,yBottom+20,String(results.length),'end');
+  }
+  label((xStart+xEnd)/2,yBottom+36,'Attempt','middle');
+  figure.append(chart);
+  return figure;
+}
+
+function buildResultHistory(results, includeType) {
+  const scrolling = resultNode('div',null,'result-history');
+  scrolling.tabIndex = 0;
+  scrolling.setAttribute('role','region');
+  scrolling.setAttribute('aria-label','Score history, newest first');
+  const table = resultNode('table');
+  const header = table.createTHead().insertRow();
+  for (const heading of includeType ? ['Date','Quiz','Score'] : ['Date','Score']) {
+    const cell = resultNode('th',heading);
+    cell.scope = 'col';
+    header.append(cell);
+  }
+  const body = table.createTBody();
+  for (const result of [...results].reverse()) {
+    const row = body.insertRow();
+    const date = new Date(result.timestamp);
+    const time = resultNode('time',scoreDateFormat.format(date));
+    time.dateTime = date.toISOString();
+    row.insertCell().append(time);
+    if (includeType) row.insertCell().textContent = quizResultNames[result.type];
+    row.insertCell().textContent = formatPercent(resultPercent(result)) + ' (' + result.correct + '/' + result.total + ')';
+  }
+  scrolling.append(table);
+  return scrolling;
+}
+
+function renderResultGroup(id, title, results, includeType = false) {
+  const panel = byId(id);
+  panel.replaceChildren(resultNode('h3',title));
+  if (!results.length) {
+    panel.append(resultNode('p','Complete a quiz to start tracking scores.','result-empty'));
+    return;
+  }
+  const summary = resultNode('p',null,'result-summary');
+  const current = resultPercent(results.at(-1));
+  const latest = resultNode('strong','Latest: ' + formatPercent(current));
+  summary.append(latest);
+  if (results.length > 1) {
+    const change = Number((current-resultPercent(results.at(-2))).toFixed(1));
+    const trend = resultNode('strong',change > 0 ? 'Progress' : change < 0 ? 'Regression' : 'No change','result-trend');
+    trend.dataset.trend = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
+    const comparison = change === 0 ? 'Same score as the previous attempt' :
+      (change > 0 ? '+' : '−') + Math.abs(change) + ' percentage points vs. previous attempt';
+    summary.append(trend,resultNode('span',comparison));
+  } else {
+    summary.append(resultNode('span','Complete one more attempt to see a trend.'));
+  }
+  const detail = resultNode('div',null,'result-detail');
+  detail.append(buildResultChart(results),buildResultHistory(results,includeType));
+  panel.append(summary,detail);
+}
+
+function renderQuizResults() {
+  const results = loadQuizResults();
+  renderResultGroup('flashcard-results','Flashcard quizzes',results.filter(result=>result.type === 'cards' || result.type === 'narrated'),true);
+  renderResultGroup('capital-map-results','Capitals',results.filter(result=>result.type === 'capital-map'));
+  renderResultGroup('state-map-results','States',results.filter(result=>result.type === 'state-map'));
+  const warning = byId('result-warning');
+  warning.hidden = !quizResultsStorageLimited;
+  warning.textContent = quizResultsStorageLimited ? 'Browser storage is unavailable or full. Some results may only be visible in this session.' : '';
+}
+window.addEventListener('storage', event => {
+  if (!byId('results-panel').hidden && (event.key === null || event.key.startsWith(quizResultPrefix))) renderQuizResults();
+});
 
 const gameTitle = document.title;
 const logo = byId('logo-button');
