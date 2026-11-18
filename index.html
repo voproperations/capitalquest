@@ -268,6 +268,12 @@ footer a{color:inherit}
 const themeButtons = [...document.querySelectorAll('.theme-swatch')];
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
+  const defaultTheme = theme === 'purple';
+  const icon = defaultTheme ? 'apple-touch-icon.png' : 'icons/' + theme + '.png';
+  document.querySelector('.emblem').src = icon;
+  const favicon = document.querySelector('link[rel="icon"]');
+  favicon.href = defaultTheme ? 'favicon.ico' : icon;
+  favicon.type = defaultTheme ? 'image/x-icon' : 'image/png';
   for (const button of themeButtons) {
     button.setAttribute('aria-pressed', String(button.dataset.theme === theme));
   }
