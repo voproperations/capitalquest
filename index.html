@@ -790,8 +790,9 @@ async function playQuestion() {
   stopNarration();
   if (!narrated || !quizStarted || byId('flashcards-panel').hidden) return;
   const attempt = narrationAttempt;
-  const clip = quizIndex === quizDeck.length ? quizResult().clip : quizDeck[quizIndex].code.toLowerCase();
-  narration.src = 'audio/quiz/' + clip + '.mp3';
+  const finished = quizIndex === quizDeck.length;
+  const clip = finished ? quizResult().clip : quizDeck[quizIndex].code.toLowerCase();
+  narration.src = 'audio/quiz/' + clip + '.mp3' + (finished ? '?v=2' : '');
   narration.playbackRate = 0.85;
   try {
     await narration.play();
