@@ -402,10 +402,13 @@ footer a{color:inherit}
     <section class="panel" id="sample-capital-map-results" aria-label="Example Capital Map quiz results"></section>
     <section class="panel" id="sample-state-map-results" aria-label="Example State Map quiz results"></section>
   </section>
+  <footer id="review-themes"></footer>
 </main>
 <div id="quiz-celebration" class="quiz-celebration" aria-hidden="true"></div>
 <script>
 'use strict';
+const gameThemePicker = document.querySelector('.theme-picker');
+document.getElementById('review-themes').append(gameThemePicker.cloneNode(true));
 const themeButtons = [...document.querySelectorAll('.theme-swatch')];
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
