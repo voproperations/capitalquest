@@ -61,8 +61,14 @@ h1{font-size:clamp(2rem,5vw,3.55rem);line-height:1.05;letter-spacing:-.065em}
 .feedback[data-kind=wrong]{background:#583a39;color:#ffdaca}
 .feedback[data-kind=complete]{background:#503e2c;color:#ffebae}
 .feedback-icon{font-size:1.23rem;flex:none}
+.map-navigation{display:flex;justify-content:flex-end;gap:6px;margin-top:8px}
+.map-navigation button{min-width:44px;padding:5px 10px}
+.map-navigation button:disabled{opacity:.55;cursor:default}
 .map-wrap{background-color:var(--ocean);background-image:radial-gradient(var(--ocean-dot) 1px,transparent 1px);background-size:17px 17px;border:1px solid var(--ocean-border);border-radius:15px;padding:5px;overflow:hidden}
-#map{display:block;width:100%;height:auto;overflow:visible}
+#map{display:block;width:100%;height:auto;overflow:hidden;touch-action:none;user-select:none}
+#map[data-zoomed=true]{cursor:grab}
+#map[data-panning=true],#map[data-panning=true] .state{cursor:grabbing}
+#map:focus-visible{outline:3px solid var(--focus);outline-offset:-3px}
 .state{outline:none;--region:#f2cc72}
 .state[data-region="0"]{--region:var(--focus)}
 .state[data-region="1"]{--region:#f9bd78}
@@ -122,6 +128,25 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid var(--control-b
 .narration-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px}
 .narration-status{font-size:.85rem;color:var(--muted)}
 .matching-modes{display:flex;gap:8px;margin-bottom:14px}
+.quiz-celebration{position:fixed;inset:0;z-index:5;overflow:hidden;pointer-events:none}
+.quiz-celebration:empty{display:none}
+.confetti,.balloon{position:absolute;background:var(--party-color);animation-fill-mode:both}
+.confetti{left:50%;top:56%;width:8px;height:12px;border-radius:2px;animation:confetti-burst var(--duration) ease-out both;animation-delay:var(--delay)}
+.confetti.streamer{width:6px;height:48px;border-radius:8px;box-shadow:inset 2px 0 #ffffff55}
+.balloon{top:-85px;left:var(--left);width:32px;height:40px;border-radius:50% 50% 47% 47%;box-shadow:inset -5px -4px #0002,inset 4px 5px #fff4;animation:balloon-fall var(--duration) ease-in both;animation-delay:var(--delay)}
+.balloon::after{content:"";position:absolute;top:100%;left:50%;width:9px;height:26px;border-left:1px solid #eee9fa;border-radius:50%}
+@keyframes confetti-burst{
+  0%{transform:translate(0,0) rotate(0deg);opacity:0}
+  15%{opacity:1}
+  42%{transform:translate(var(--burst-x),var(--rise)) rotate(var(--turn));opacity:1}
+  82%{opacity:1}
+  100%{transform:translate(var(--end-x),55vh) rotate(var(--spin));opacity:0}
+}
+@keyframes balloon-fall{
+  from{transform:translate(0,0) rotate(-9deg)}
+  to{transform:translate(var(--drift),calc(100vh + 85px)) rotate(12deg)}
+}
+@media(prefers-reduced-motion:reduce){.quiz-celebration{display:none!important}}
 .quiz-progress{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
 .quiz-prompt{cursor:default}
 .quiz-prompt:hover{background:var(--card)}
@@ -192,7 +217,12 @@ footer a{color:inherit}
       <div class="panel-heading"><h2 id="map-heading">U.S. map</h2><div class="map-header-meta"><span class="state-name" id="state-name" aria-hidden="true" hidden></span><span class="count" id="remaining">50 left</span></div></div>
       <p class="feedback" id="feedback" role="status" aria-atomic="true"><span class="feedback-icon" aria-hidden="true">✦</span><span id="message">Pick a capital from the word bank to begin.</span></p>
       <div class="map-wrap">
-        <svg id="map" viewBox="0 0 1050 614" aria-label="Interactive map of the 50 U.S. states" role="group"></svg>
+        <svg id="map" viewBox="0 0 1050 614" aria-label="Interactive map of the 50 U.S. states" role="group" tabindex="0"></svg>
+      </div>
+      <div class="map-navigation" role="group" aria-label="Map zoom">
+        <button type="button" id="map-zoom-out" class="restart" aria-label="Zoom out" disabled>−</button>
+        <button type="button" id="map-zoom-reset" class="restart" aria-label="Reset map zoom, 100 percent" disabled>100%</button>
+        <button type="button" id="map-zoom-in" class="restart" aria-label="Zoom in">+</button>
       </div>
       <div class="small-states" id="small-states" role="group" aria-label="Small state shortcuts"></div>
       <div class="state-picker"><label id="state-list-label" for="state-list">Or choose a state by name</label><select id="state-list"><option value="">Choose a state…</option></select><a class="restart word-bank-link" href="#bank-heading">Word bank ↓</a></div>
@@ -236,6 +266,7 @@ footer a{color:inherit}
         <div id="study-bank" class="capital-list" role="group" aria-label="Practice capital choices"></div>
       </section>
     </div>
+    <div id="quiz-celebration" class="quiz-celebration" aria-hidden="true"></div>
     <div class="board" id="quiz-panel" hidden>
       <section class="panel" aria-labelledby="quiz-heading">
         <div class="panel-heading">
@@ -654,9 +685,128 @@ for (const group of [map,shortcuts]) {
 }
 
 map.addEventListener('click', event => {
+  if (suppressMapClick && event.detail !== 0) return;
   const target = event.target.closest('[data-state]');
   if (target) tryMatch(target.dataset.state);
 });
+
+const mapWidth = 1050;
+const mapHeight = 614;
+const maxMapZoom = 5;
+const mapView = {x:0,y:0,zoom:1};
+const mapPointers = new Map();
+const zoomIn = byId('map-zoom-in');
+const zoomOut = byId('map-zoom-out');
+const zoomReset = byId('map-zoom-reset');
+let suppressMapClick = false;
+
+const clamp = (value,min,max) => Math.min(max,Math.max(min,value));
+
+function setMapView(x,y,zoom) {
+  const width = mapWidth / zoom;
+  const height = mapHeight / zoom;
+  mapView.x = clamp(x,0,mapWidth-width);
+  mapView.y = clamp(y,0,mapHeight-height);
+  mapView.zoom = zoom;
+  map.setAttribute('viewBox', [mapView.x,mapView.y,width,height].join(' '));
+  map.dataset.zoomed = String(zoom > 1);
+  const percent = Math.round(100 * zoom);
+  zoomReset.textContent = percent + '%';
+  zoomReset.setAttribute('aria-label', 'Reset map zoom, ' + percent + ' percent');
+  zoomOut.disabled = zoomReset.disabled = zoom === 1;
+  zoomIn.disabled = zoom === maxMapZoom;
+}
+
+function adjustMapZoom(factor, beforeX = 0.5, beforeY = 0.5, afterX = beforeX, afterY = beforeY) {
+  const zoom = clamp(mapView.zoom * factor,1,maxMapZoom);
+  setMapView(mapView.x + mapWidth * (beforeX/mapView.zoom - afterX/zoom),
+    mapView.y + mapHeight * (beforeY/mapView.zoom - afterY/zoom), zoom);
+}
+
+zoomIn.addEventListener('click', () => {
+  adjustMapZoom(1.5);
+  if (zoomIn.disabled) zoomOut.focus({preventScroll:true});
+});
+zoomOut.addEventListener('click', () => {
+  adjustMapZoom(1/1.5);
+  if (zoomOut.disabled) zoomIn.focus({preventScroll:true});
+});
+zoomReset.addEventListener('click', () => {
+  setMapView(0,0,1);
+  zoomIn.focus({preventScroll:true});
+});
+
+map.addEventListener('wheel', event => {
+  if (!event.deltaY) return;
+  const bounds = map.getBoundingClientRect();
+  const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? bounds.height : 1;
+  const factor = Math.exp(-event.deltaY * unit * 0.0025);
+  if (!event.ctrlKey && ((factor < 1 && mapView.zoom === 1) ||
+      (factor > 1 && mapView.zoom === maxMapZoom))) return;
+  event.preventDefault();
+  adjustMapZoom(factor, (event.clientX-bounds.left)/bounds.width, (event.clientY-bounds.top)/bounds.height);
+}, {passive:false});
+
+map.addEventListener('pointerdown', event => {
+  if (event.button !== 0 || mapPointers.size === 2) return;
+  if (!mapPointers.size) suppressMapClick = false;
+  mapPointers.set(event.pointerId, {x:event.clientX,y:event.clientY});
+  if (mapPointers.size === 2) startMapPan();
+});
+
+function startMapPan() {
+  suppressMapClick = true;
+  map.dataset.panning = 'true';
+  for (const id of mapPointers.keys()) map.setPointerCapture(id);
+}
+
+map.addEventListener('pointermove', event => {
+  const previous = mapPointers.get(event.pointerId);
+  if (!previous) return;
+  const x = event.clientX;
+  const y = event.clientY;
+  const bounds = map.getBoundingClientRect();
+  if (mapPointers.size === 2) {
+    const other = [...mapPointers.entries()].find(([id]) => id !== event.pointerId)[1];
+    const oldDistance = Math.hypot(previous.x-other.x,previous.y-other.y);
+    const newDistance = Math.hypot(x-other.x,y-other.y);
+    adjustMapZoom(oldDistance > 0 ? newDistance/oldDistance : 1,
+      ((previous.x+other.x)/2-bounds.left)/bounds.width,
+      ((previous.y+other.y)/2-bounds.top)/bounds.height,
+      ((x+other.x)/2-bounds.left)/bounds.width,
+      ((y+other.y)/2-bounds.top)/bounds.height);
+  } else {
+    if (mapView.zoom === 1) {
+      if (Math.hypot(x-previous.x,y-previous.y) >= 6) suppressMapClick = true;
+      return;
+    }
+    if (!suppressMapClick) {
+      if (Math.hypot(x-previous.x,y-previous.y) < 6) return;
+      startMapPan();
+    }
+    setMapView(mapView.x - (x-previous.x)*mapWidth/(bounds.width*mapView.zoom),
+      mapView.y - (y-previous.y)*mapHeight/(bounds.height*mapView.zoom), mapView.zoom);
+  }
+  mapPointers.set(event.pointerId,{x,y});
+});
+
+function endMapPointer(event) {
+  if (!mapPointers.delete(event.pointerId)) return;
+  if (!mapPointers.size) delete map.dataset.panning;
+}
+window.addEventListener('pointerup', endMapPointer);
+window.addEventListener('pointercancel', endMapPointer);
+
+map.addEventListener('keydown', event => {
+  if (event.target !== map) return;
+  const offsets = {ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+  const offset = offsets[event.key];
+  if (!offset || mapView.zoom === 1) return;
+  event.preventDefault();
+  setMapView(mapView.x + offset[0]*mapWidth/mapView.zoom/12,
+    mapView.y + offset[1]*mapHeight/mapView.zoom/12,mapView.zoom);
+});
+
 shortcuts.addEventListener('click', event => {
   const target = event.target.closest('[data-state]');
   if (target) tryMatch(target.dataset.state);
@@ -848,6 +998,7 @@ let quizIndex = 0;
 let quizCorrect = 0;
 let quizAnswered = false;
 let advanceTimer;
+let celebrationTimer;
 
 function flashcardSubtitle() {
   return quizPanel.hidden
@@ -898,6 +1049,7 @@ function chooseFlashcardMode(mode) {
   narratedMode.setAttribute('aria-pressed', String(narrated));
   byId('study-panel').hidden = isQuiz;
   quizPanel.hidden = !isQuiz;
+  if (!isQuiz) celebration.replaceChildren();
   narrationControls.hidden = !narrated || !quizStarted;
   byId('subtitle').textContent = flashcardSubtitle();
   playQuestion();
@@ -947,6 +1099,47 @@ function updateQuizProgress() {
   byId('quiz-remaining').textContent = remaining + ' left';
 }
 
+const celebration = byId('quiz-celebration');
+function celebrateQuiz() {
+  if (quizResult().percent <= 80) return;
+  celebrationTimer = setTimeout(() => {
+    const restoreFocus = !quizPanel.hidden && !byId('flashcards-panel').hidden &&
+      byId('audio-review').hidden && quizPanel.contains(document.activeElement);
+    resetQuiz();
+    if (restoreFocus) startQuiz.focus({preventScroll:true});
+  }, 9000);
+
+  if (quizPanel.hidden || byId('flashcards-panel').hidden || !byId('audio-review').hidden ||
+      matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const colors = ['#ffd064','#fc82ad','#a6e87d','#81ceff','#c9a3ff','#ff996e'];
+  const decorations = document.createDocumentFragment();
+  for (let index = 0; index < 60; index++) {
+    const piece = document.createElement('span');
+    piece.style.setProperty('--party-color', colors[index % colors.length]);
+    if (index < 50) {
+      const spread = (Math.random() - 0.5) * 108;
+      const spin = (Math.random() - 0.5) * 1500;
+      piece.className = index % 4 === 0 ? 'confetti streamer' : 'confetti';
+      piece.style.setProperty('--burst-x', spread * 0.72 + 'vw');
+      piece.style.setProperty('--end-x', spread + 'vw');
+      piece.style.setProperty('--rise', -(12 + Math.random() * 40) + 'vh');
+      piece.style.setProperty('--turn', spin / 2 + 'deg');
+      piece.style.setProperty('--spin', spin + 'deg');
+      piece.style.setProperty('--delay', Math.floor(index / 17) * 2400 + 'ms');
+      piece.style.setProperty('--duration', 1700 + Math.random() * 850 + 'ms');
+    } else {
+      piece.className = 'balloon';
+      piece.style.setProperty('--left', (index - 50) * 10 + 3 + 'vw');
+      piece.style.setProperty('--drift', (Math.random() - 0.5) * 10 + 'vw');
+      piece.style.setProperty('--delay', (index - 50) * 480 + 'ms');
+      piece.style.setProperty('--duration', 2300 + Math.random() * 800 + 'ms');
+    }
+    piece.addEventListener('animationend', () => piece.remove(), {once:true});
+    decorations.append(piece);
+  }
+  celebration.replaceChildren(decorations);
+}
+
 function showQuestion() {
   quizAnswered = false;
   const finished = quizIndex === quizDeck.length;
@@ -978,6 +1171,8 @@ function resetQuiz() {
   quizIndex = 0;
   quizCorrect = 0;
   clearTimeout(advanceTimer);
+  clearTimeout(celebrationTimer);
+  celebration.replaceChildren();
   fillCapitalChoices(quizBank);
   quizBank.scrollTop = 0;
   showQuestion();
@@ -1018,6 +1213,7 @@ quizBank.addEventListener('click', event => {
     button.classList.remove('choice-wrong');
     quizIndex++;
     showQuestion();
+    if (quizIndex === quizDeck.length) celebrateQuiz();
     if (attentionInQuiz) (quizBank.hidden ? byId('restart-quiz') : button).focus({preventScroll:true});
   }, quizFeedbackDuration);
 });
