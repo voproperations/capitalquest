@@ -115,19 +115,18 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid var(--control-b
 .theme-swatch[data-theme=blue]{--swatch-light:#b2deff;--swatch-dark:#17548d}
 .theme-swatch[data-theme=green]{--swatch-light:#c3edbf;--swatch-dark:#276437}
 .theme-swatch[data-theme=solarized]{--swatch-light:#f5d579;--swatch-dark:#006778}
-.modes{display:flex;gap:5px;width:fit-content;padding:4px;margin-bottom:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.modes{display:flex;flex-wrap:wrap;gap:5px;width:fit-content;max-width:100%;padding:4px;margin-bottom:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
 .mode{min-height:44px;padding:7px 16px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted);font-weight:750}
 .mode:hover{background:var(--control-hover);color:var(--ink)}
 .mode[aria-selected=true]{background:var(--accent);border-color:var(--accent-border);color:var(--accent-ink)}
-.flashcard-modes{max-width:720px;margin:0 auto 14px;display:flex;flex-wrap:wrap;gap:8px}
-.flashcard-modes button[aria-pressed=true],.matching-modes button[aria-pressed=true]{background:var(--accent);border-color:var(--accent-border);color:var(--accent-ink)}
+.matching-modes button[aria-pressed=true]{background:var(--accent);border-color:var(--accent-border);color:var(--accent-ink)}
 .quiz-choice{padding-inline:10px}
 .quiz-choice:disabled{cursor:default}
 .chip.choice-correct{background:#28483b;border-color:#5d9476;color:#d0f4db}
 .chip.choice-wrong{background:#583a39;border-color:#af7667;color:#ffdaca}
 .narration-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px}
 .narration-status{font-size:.85rem;color:var(--muted)}
-.matching-modes{display:flex;gap:8px;margin-bottom:14px}
+.matching-modes{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .quiz-celebration{position:fixed;inset:0;z-index:5;overflow:hidden;pointer-events:none}
 .quiz-celebration:empty{display:none}
 .confetti,.balloon{position:absolute;background:var(--party-color);animation-fill-mode:both}
@@ -163,6 +162,7 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid var(--control-b
 footer{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 18px;margin-top:14px;text-align:center;font-size:.75rem;color:var(--muted)}
 footer a{color:inherit}
 .review-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
+.review-actions{display:flex;flex-wrap:wrap;gap:8px}
 .review-header a{display:inline-flex;align-items:center;color:var(--ink);text-decoration:none}
 .review-list{list-style:none;padding:0;margin:0}
 .review-list li{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
@@ -201,18 +201,23 @@ footer a{color:inherit}
   <div class="modes" role="tablist" aria-label="Game mode">
     <button type="button" class="mode" id="matching-tab" role="tab" aria-selected="true" aria-controls="matching-panel">Matching</button>
     <button type="button" class="mode" id="flashcards-tab" role="tab" aria-selected="false" aria-controls="flashcards-panel" tabindex="-1">Flashcards</button>
+    <button type="button" class="mode" id="quizzes-tab" role="tab" aria-selected="false" aria-controls="quizzes-panel" tabindex="-1">Quizzes</button>
   </div>
   <div id="matching-panel" role="tabpanel" aria-labelledby="matching-tab">
   <div class="matching-modes" role="group" aria-label="Matching activity">
     <button type="button" class="restart" id="match-capitals" aria-pressed="true">Capitals</button>
     <button type="button" class="restart" id="match-states" aria-pressed="false">States</button>
   </div>
-  <div class="scoreboard" aria-label="Game progress">
-    <span class="metric"><strong id="score">0/50</strong> matched</span>
+  <div id="practice-map"></div>
+  </div>
+  <div id="matching-game">
+  <button type="button" class="card" id="start-map-quiz" hidden><strong class="card-answer">Click to Start</strong></button>
+  <div class="scoreboard" id="matching-scoreboard" aria-label="Game progress">
+    <span class="metric"><strong id="score">0/50</strong> <span id="matching-score-label">matched</span></span>
     <progress id="progress" class="progress" value="0" max="50" aria-label="States matched"></progress>
     <span class="metric"><strong id="streak">0</strong> streak</span>
   </div>
-  <div class="board">
+  <div class="board" id="matching-board">
     <section class="panel" aria-labelledby="map-heading">
       <div class="panel-heading"><h2 id="map-heading">U.S. map</h2><div class="map-header-meta"><span class="state-name" id="state-name" aria-hidden="true" hidden></span><span class="count" id="remaining">50 left</span></div></div>
       <p class="feedback" id="feedback" role="status" aria-atomic="true"><span class="feedback-icon" aria-hidden="true">✦</span><span id="message">Pick a capital from the word bank to begin.</span></p>
@@ -231,16 +236,11 @@ footer a{color:inherit}
       <div class="panel-heading"><h2 id="bank-heading">Capital word bank</h2><button type="button" id="restart" class="restart">↻ Restart</button></div>
       <p class="bank-note" id="instructions">Tap a capital, then tap a state. You can also drag a capital by its ⠿ handle.</p>
       <div id="bank" class="capital-list" role="group" aria-label="Unmatched capitals" aria-describedby="instructions"></div>
-      <div id="finish" hidden><span aria-hidden="true">🏆</span><strong>All 50 matched!</strong><p id="results"></p><button type="button" id="again" class="restart">Play again</button></div>
+      <div id="finish" hidden><span aria-hidden="true">🏆</span><strong id="matching-result">All 50 matched!</strong><p id="results"></p><button type="button" id="again" class="restart">Play again</button></div>
     </section>
   </div>
   </div>
   <div id="flashcards-panel" role="tabpanel" aria-labelledby="flashcards-tab" hidden>
-    <div class="flashcard-modes" role="group" aria-label="Flashcard activity">
-      <button type="button" id="study-mode" class="restart" aria-pressed="true" aria-controls="study-panel">Study</button>
-      <button type="button" id="quiz-mode" class="restart" aria-pressed="false" aria-controls="quiz-panel">Quiz</button>
-      <button type="button" id="narrated-mode" class="restart" aria-pressed="false" aria-controls="quiz-panel">Narrated Quiz</button>
-    </div>
     <div class="board" id="study-panel">
       <section class="panel cards-panel" aria-label="Study flashcards">
         <div class="panel-heading">
@@ -266,8 +266,16 @@ footer a{color:inherit}
         <div id="study-bank" class="capital-list" role="group" aria-label="Practice capital choices"></div>
       </section>
     </div>
-    <div id="quiz-celebration" class="quiz-celebration" aria-hidden="true"></div>
-    <div class="board" id="quiz-panel" hidden>
+  </div>
+  <div id="quizzes-panel" role="tabpanel" aria-labelledby="quizzes-tab" hidden>
+    <div class="matching-modes" role="group" aria-label="Quiz type">
+      <button type="button" id="quiz-mode" class="restart" aria-pressed="true" aria-controls="quiz-panel">Capital Cards</button>
+      <button type="button" id="narrated-mode" class="restart" aria-pressed="false" aria-controls="quiz-panel">Narrated Cards</button>
+      <button type="button" id="capital-map-mode" class="restart" aria-pressed="false" aria-controls="quiz-map">Capital Map</button>
+      <button type="button" id="state-map-mode" class="restart" aria-pressed="false" aria-controls="quiz-map">State Map</button>
+    </div>
+    <div id="quiz-map" hidden></div>
+    <div class="board" id="quiz-panel">
       <section class="panel" aria-labelledby="quiz-heading">
         <div class="panel-heading">
           <h2 id="quiz-heading">Capital quiz</h2>
@@ -313,13 +321,17 @@ footer a{color:inherit}
 <main id="audio-review" hidden>
   <header class="review-header">
     <h1 id="review-heading" tabindex="-1">Audio clips</h1>
-    <a class="restart" href="#">← Back to Capital Quest</a>
+    <div class="review-actions">
+      <button type="button" class="restart" id="preview-celebration">Preview celebration</button>
+      <a class="restart" href="#">← Back to Capital Quest</a>
+    </div>
   </header>
   <section class="panel" aria-labelledby="review-heading">
     <p id="review-status" role="status"></p>
     <ul class="review-list" id="review-list"></ul>
   </section>
 </main>
+<div id="quiz-celebration" class="quiz-celebration" aria-hidden="true"></div>
 <script>
 'use strict';
 const themeButtons = [...document.querySelectorAll('.theme-swatch')];
@@ -425,6 +437,14 @@ const shortcuts = byId('small-states');
 const shortcutButtons = new Map();
 const matchingRounds = new Map();
 let matchStates = false;
+let mapQuiz = false;
+let practiceStates = false;
+let mapQuizStarted = false;
+let attempted = new Set();
+let mapAdvanceTimer;
+let mapResetTimer;
+const matchingGame = byId('matching-game');
+const startMapQuiz = byId('start-map-quiz');
 let matched = new Set();
 const mapButtons = new Map();
 const capitalButtons = new Map();
@@ -464,7 +484,7 @@ function matchingSubtitle() {
 }
 
 function selectCapital(code) {
-  if (matched.has(code)) return;
+  if (matched.has(code) || (mapQuiz && (attempted.has(code) || (code && capitalButtons.get(code)?.disabled)))) return;
   if (choice) capitalButtons.get(choice).setAttribute('aria-pressed','false');
   choice = code;
   clearMistake();
@@ -475,12 +495,16 @@ function selectCapital(code) {
 
 function updateScore() {
   byId('score').textContent = matched.size + '/50';
-  byId('progress').value = matched.size;
+  byId('progress').value = mapQuiz ? attempted.size : matched.size;
   byId('streak').textContent = streak;
-  byId('remaining').textContent = (50 - matched.size) + ' left';
+  byId('remaining').textContent = (50 - (mapQuiz ? attempted.size : matched.size)) + ' left';
 }
 
 function tryMatch(code) {
+  if (mapQuiz) {
+    answerMapQuiz(code);
+    return;
+  }
   const state = byCode.get(code);
   if (matched.has(code)) {
     announce(matchStates ? state.name + ' is already matched.' :
@@ -593,6 +617,11 @@ function addLabel(shape,state,[x,y],callout = "") {
 }
 
 function reset() {
+  clearTimeout(mapAdvanceTimer);
+  clearTimeout(mapResetTimer);
+  if (mapQuiz && !byId('quiz-map').hidden) byId('quiz-celebration').replaceChildren();
+  mapQuizStarted = false;
+  attempted = new Set();
   matched = new Set();
   streak = bestStreak = guesses = 0;
   drawMatchingRound();
@@ -610,7 +639,7 @@ function drawMatchingRound() {
   capitalButtons.clear();
   bank.replaceChildren();
   for (const state of matchStates ? states : capitals) {
-    if (matched.has(state.code)) {
+    if (!mapQuiz && matched.has(state.code)) {
       markMatched(state);
       continue;
     }
@@ -618,6 +647,7 @@ function drawMatchingRound() {
     button.type = 'button';
     button.className = 'chip';
     button.dataset.capital = state.code;
+    button.disabled = mapQuiz && attempted.has(state.code);
     button.setAttribute('aria-pressed','false');
     const handle = document.createElement('span');
     handle.className = 'handle';
@@ -629,34 +659,61 @@ function drawMatchingRound() {
     bank.append(button);
     capitalButtons.set(state.code,button);
   }
-  const complete = matched.size === states.length;
+  const complete = (mapQuiz ? attempted.size : matched.size) === states.length;
   bank.hidden = complete;
   bank.scrollTop = 0;
-  byId('finish').hidden = !complete;
+  byId('finish').hidden = !complete || mapQuiz;
   byId('results').textContent = 'Best streak: ' + bestStreak + ' · ' + guesses + ' total guesses';
   updateScore();
+  const waitingToStart = mapQuiz && !mapQuizStarted;
+  startMapQuiz.hidden = !waitingToStart;
+  byId('matching-scoreboard').hidden = waitingToStart;
+  byId('matching-board').hidden = waitingToStart;
+  if (mapQuiz && complete) {
+    showMapQuizResult();
+    return;
+  }
+  byId('matching-result').textContent = 'All 50 matched!';
   announce(complete ? 'You matched all 50 states!' :
     (matchStates ? 'Pick a state from the word bank to begin.' : 'Pick a capital from the word bank to begin.'),
     complete ? 'complete' : '');
 }
 
-function chooseMatchingActivity(statesMode) {
-  if (matchStates === statesMode) return;
-  matchingRounds.set(matchStates, {matched, streak, bestStreak, guesses});
+function roundKey(statesMode, isQuiz) {
+  return (isQuiz ? 'quiz-' : 'practice-') + (statesMode ? 'states' : 'capitals');
+}
+
+function chooseMatchingActivity(statesMode, isQuiz = false) {
+  if (matchStates === statesMode && mapQuiz === isQuiz) return;
+  clearTimeout(mapAdvanceTimer);
+  clearTimeout(mapResetTimer);
+  const previous = roundKey(matchStates, mapQuiz);
+  if (mapQuiz && attempted.size === states.length && quizResult(matched.size).percent >= 80) {
+    matchingRounds.delete(previous);
+  } else {
+    matchingRounds.set(previous, {matched, streak, bestStreak, guesses, attempted, mapQuizStarted});
+  }
   matchStates = statesMode;
-  const round = matchingRounds.get(matchStates) ?? {matched:new Set(), streak:0, bestStreak:0, guesses:0};
-  ({matched, streak, bestStreak, guesses} = round);
+  mapQuiz = isQuiz;
+  if (!mapQuiz) practiceStates = statesMode;
+  const round = matchingRounds.get(roundKey(matchStates, mapQuiz)) ??
+    {matched:new Set(), streak:0, bestStreak:0, guesses:0, attempted:new Set(), mapQuizStarted:false};
+  ({matched, streak, bestStreak, guesses, attempted, mapQuizStarted} = round);
+  byId('matching-score-label').textContent = mapQuiz ? 'correct' : 'matched';
+  byId('progress').setAttribute('aria-label', mapQuiz ? 'Questions answered' : 'States matched');
   byId('match-capitals').setAttribute('aria-pressed', String(!matchStates));
   byId('match-states').setAttribute('aria-pressed', String(matchStates));
-  byId('subtitle').textContent = matchingSubtitle();
+  if (!mapQuiz) byId('subtitle').textContent = matchingSubtitle();
   byId('bank-heading').textContent = matchStates ? 'State word bank' : 'Capital word bank';
   byId('instructions').textContent = matchStates
     ? 'Tap a state name, then find its outline on the map. You can also drag by the ⠿ handle.'
     : 'Tap a capital, then tap a state. You can also drag a capital by its ⠿ handle.';
-  bank.setAttribute('aria-label', matchStates ? 'Unmatched states' : 'Unmatched capitals');
+  bank.setAttribute('aria-label', mapQuiz ? (matchStates ? 'State choices' : 'Capital choices') :
+    (matchStates ? 'Unmatched states' : 'Unmatched capitals'));
   stateList.hidden = matchStates;
   byId('state-list-label').hidden = matchStates;
   drawMatchingRound();
+  if (mapQuiz && mapQuizStarted && attempted.size < states.length) pickNextMapItem();
 }
 
 byId('match-capitals').addEventListener('click', () => chooseMatchingActivity(false));
@@ -664,7 +721,7 @@ byId('match-states').addEventListener('click', () => chooseMatchingActivity(true
 
 const stateName = byId('state-name');
 function showStateName(target) {
-  const show = target && (!matchStates || matched.has(target.dataset.state));
+  const show = target && (!matchStates || (!mapQuiz && matched.has(target.dataset.state)));
   stateName.hidden = !show;
   stateName.textContent = show ? byCode.get(target.dataset.state).name : '';
 }
@@ -828,7 +885,7 @@ stateList.addEventListener('change', () => {
 });
 bank.addEventListener('click', event => {
   const button = event.target.closest('.chip');
-  if (!button) return;
+  if (!button || button.disabled) return;
   selectCapital(choice === button.dataset.capital ? null : button.dataset.capital);
   if (!choice) return;
   if (event.detail === 0) {
@@ -845,11 +902,11 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && choice) selectCapital(null);
 });
 byId('restart').addEventListener('click', () => {
-  if (!guesses || matched.size === 50 || confirm('Start over? This will clear your current score.')) reset();
+  if (!guesses || (mapQuiz ? attempted.size : matched.size) === 50 || confirm('Start over? This will clear your current score.')) reset();
 });
 byId('again').addEventListener('click', () => {
   reset();
-  bank.firstElementChild.focus();
+  (mapQuiz ? startMapQuiz : bank.firstElementChild).focus();
 });
 
 let drag = null;
@@ -859,7 +916,7 @@ function mapTarget(event) {
 
 bank.addEventListener('pointerdown', event => {
   const button = event.target.closest('.chip');
-  if (!button || drag || event.button !== 0) return;
+  if (!button || button.disabled || drag || event.button !== 0) return;
   if (event.pointerType !== 'mouse' && !event.target.closest('.handle')) return;
   drag = {button,id:event.pointerId,x:event.clientX,y:event.clientY,ghost:null,over:null};
 });
@@ -903,7 +960,7 @@ function swallowDragClick(event) {
 }
 window.addEventListener('pointerup',endDrag);
 window.addEventListener('pointercancel',endDrag);
-const modeTabs = [byId('matching-tab'), byId('flashcards-tab')];
+const modeTabs = [byId('matching-tab'), byId('flashcards-tab'), byId('quizzes-tab')];
 const card = byId('card');
 const previousCard = byId('previous-card');
 const nextCard = byId('next-card');
@@ -912,24 +969,32 @@ let cardIndex = 0;
 let revealed = false;
 
 function chooseMode(tab) {
+  celebration.replaceChildren();
   for (const modeTab of modeTabs) {
     const selected = modeTab === tab;
     modeTab.setAttribute('aria-selected', String(selected));
     modeTab.tabIndex = selected ? 0 : -1;
     byId(modeTab.getAttribute('aria-controls')).hidden = !selected;
   }
-  const isMatching = tab === modeTabs[0];
-  if (isMatching) stopNarration();
-  byId('subtitle').textContent = isMatching
-    ? matchingSubtitle()
-    : flashcardSubtitle();
+  if (tab === modeTabs[0]) {
+    stopNarration();
+    chooseMatchingActivity(practiceStates);
+    byId('practice-map').append(matchingGame);
+    byId('subtitle').textContent = matchingSubtitle();
+  } else if (tab === modeTabs[1]) {
+    stopNarration();
+    byId('subtitle').textContent = 'Practice with the word bank or flip the card to check.';
+  } else {
+    chooseQuizType(quizType);
+  }
 }
 
 for (const tab of modeTabs) {
   tab.addEventListener('click', () => chooseMode(tab));
   tab.addEventListener('keydown', event => {
-    const destination = {ArrowLeft:modeTabs.find(other => other !== tab),
-      ArrowRight:modeTabs.find(other => other !== tab),Home:modeTabs[0],End:modeTabs[1]}[event.key];
+    const index = modeTabs.indexOf(tab);
+    const destination = {ArrowLeft:modeTabs[(index+modeTabs.length-1)%modeTabs.length],
+      ArrowRight:modeTabs[(index+1)%modeTabs.length],Home:modeTabs[0],End:modeTabs.at(-1)}[event.key];
     if (!destination) return;
     event.preventDefault();
     chooseMode(destination);
@@ -975,9 +1040,12 @@ byId('shuffle-cards').addEventListener('click', () => {
   revealed = false;
   showStudyQuestion();
 });
-const studyMode = byId('study-mode');
 const quizMode = byId('quiz-mode');
 const narratedMode = byId('narrated-mode');
+const quizTypes = new Map([
+  ['cards',quizMode],['narrated',narratedMode],['capital-map',byId('capital-map-mode')],['state-map',byId('state-map-mode')]
+]);
+let quizType = 'cards';
 const narrationControls = byId('narration-controls');
 const narrationStatus = byId('narration-status');
 const narrationRate = 0.85;
@@ -1000,20 +1068,14 @@ let quizAnswered = false;
 let advanceTimer;
 let celebrationTimer;
 
-function flashcardSubtitle() {
-  return quizPanel.hidden
-    ? 'Practice with the word bank or flip the card to check.'
-    : 'Choose one answer per card. The quiz advances automatically.';
-}
-
 function stopNarration() {
   narrationAttempt++;
   narration.pause();
   narrationStatus.textContent = '';
 }
 
-function quizResult() {
-  const percent = Math.round(100 * quizCorrect / quizDeck.length);
+function quizResult(correct = quizCorrect) {
+  const percent = Math.round(100 * correct / quizDeck.length);
   return percent >= 80
     ? {percent, title:'Great Job!', clip:'great-job'}
     : {percent, title:'Keep Practicing — You Can Do It!', clip:'keep-practicing'};
@@ -1025,7 +1087,7 @@ function quizAudioSource(clip, isEnding) {
 
 async function playQuestion() {
   stopNarration();
-  if (!narrated || !quizStarted || byId('flashcards-panel').hidden || !byId('audio-review').hidden) return;
+  if (!narrated || !quizStarted || quizPanel.hidden || byId('quizzes-panel').hidden || !byId('audio-review').hidden) return;
   const attempt = narrationAttempt;
   const finished = quizIndex === quizDeck.length;
   const clip = finished ? quizResult().clip : quizDeck[quizIndex].code.toLowerCase();
@@ -1041,17 +1103,21 @@ async function playQuestion() {
   }
 }
 
-function chooseFlashcardMode(mode) {
-  const isQuiz = mode !== 'study';
-  narrated = mode === 'narrated';
-  studyMode.setAttribute('aria-pressed', String(!isQuiz));
-  quizMode.setAttribute('aria-pressed', String(mode === 'quiz'));
-  narratedMode.setAttribute('aria-pressed', String(narrated));
-  byId('study-panel').hidden = isQuiz;
-  quizPanel.hidden = !isQuiz;
-  if (!isQuiz) celebration.replaceChildren();
+function chooseQuizType(type) {
+  quizType = type;
+  const isMap = type.endsWith('-map');
+  narrated = type === 'narrated';
+  for (const [name, button] of quizTypes) button.setAttribute('aria-pressed', String(name === type));
+  quizPanel.hidden = isMap;
+  byId('quiz-map').hidden = !isMap;
+  celebration.replaceChildren();
   narrationControls.hidden = !narrated || !quizStarted;
-  byId('subtitle').textContent = flashcardSubtitle();
+  if (isMap) {
+    chooseMatchingActivity(type === 'state-map', true);
+    byId('quiz-map').append(matchingGame);
+  }
+  byId('subtitle').textContent = isMap ? 'Choose a name and give it one shot on the map.' :
+    'Choose one answer per card. The quiz advances automatically.';
   playQuestion();
 }
 
@@ -1101,16 +1167,20 @@ function updateQuizProgress() {
 
 const celebration = byId('quiz-celebration');
 function celebrateQuiz() {
-  if (quizResult().percent <= 80) return;
+  if (quizResult().percent < 80) return;
   celebrationTimer = setTimeout(() => {
-    const restoreFocus = !quizPanel.hidden && !byId('flashcards-panel').hidden &&
+    const restoreFocus = !quizPanel.hidden && !byId('quizzes-panel').hidden &&
       byId('audio-review').hidden && quizPanel.contains(document.activeElement);
     resetQuiz();
     if (restoreFocus) startQuiz.focus({preventScroll:true});
   }, 9000);
 
-  if (quizPanel.hidden || byId('flashcards-panel').hidden || !byId('audio-review').hidden ||
+  if (quizPanel.hidden || byId('quizzes-panel').hidden || !byId('audio-review').hidden ||
       matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  showCelebration();
+}
+
+function showCelebration() {
   const colors = ['#ffd064','#fc82ad','#a6e87d','#81ceff','#c9a3ff','#ff996e'];
   const decorations = document.createDocumentFragment();
   for (let index = 0; index < 60; index++) {
@@ -1138,6 +1208,55 @@ function celebrateQuiz() {
     decorations.append(piece);
   }
   celebration.replaceChildren(decorations);
+}
+
+function showMapQuizResult() {
+  const result = quizResult(matched.size);
+  bank.hidden = false;
+  announce(result.title + ' ' + result.percent + '% correct.', 'complete');
+}
+
+startMapQuiz.addEventListener('click', event => {
+  mapQuizStarted = true;
+  drawMatchingRound();
+  pickNextMapItem();
+  if (event.detail === 0) map.focus({preventScroll:true});
+});
+
+function pickNextMapItem() {
+  const choices = bank.querySelectorAll('button:not(:disabled)');
+  const next = choices[Math.floor(Math.random()*choices.length)];
+  if (next) selectCapital(next.dataset.capital);
+}
+
+function answerMapQuiz(code) {
+  if (!mapQuizStarted || !choice || attempted.has(choice)) return;
+  const selected = choice;
+  const correct = selected === code;
+  const chip = capitalButtons.get(selected);
+  chip.setAttribute('aria-pressed','false');
+  choice = null;
+  attempted.add(selected);
+  chip.disabled = true;
+  guesses++;
+  if (correct) matched.add(selected);
+  streak = correct ? streak+1 : 0;
+  bestStreak = Math.max(streak,bestStreak);
+  updateScore();
+  announce(correct ? 'Correct!' : 'Incorrect.', correct ? 'correct' : 'wrong');
+  for (const button of bank.children) button.disabled = true;
+  mapAdvanceTimer = setTimeout(() => {
+    for (const button of bank.children) button.disabled = attempted.has(button.dataset.capital);
+    if (attempted.size < states.length) {
+      pickNextMapItem();
+      return;
+    }
+    showMapQuizResult();
+    if (quizResult(matched.size).percent < 80) return;
+    if (!byId('quizzes-panel').hidden && !byId('quiz-map').hidden && byId('audio-review').hidden &&
+        !matchMedia('(prefers-reduced-motion: reduce)').matches) showCelebration();
+    mapResetTimer = setTimeout(reset,9000);
+  },quizFeedbackDuration);
 }
 
 function showQuestion() {
@@ -1172,15 +1291,13 @@ function resetQuiz() {
   quizCorrect = 0;
   clearTimeout(advanceTimer);
   clearTimeout(celebrationTimer);
-  celebration.replaceChildren();
+  if (!quizPanel.hidden) celebration.replaceChildren();
   fillCapitalChoices(quizBank);
   quizBank.scrollTop = 0;
   showQuestion();
 }
 
-studyMode.addEventListener('click', () => chooseFlashcardMode('study'));
-quizMode.addEventListener('click', () => chooseFlashcardMode('quiz'));
-narratedMode.addEventListener('click', () => chooseFlashcardMode('narrated'));
+for (const [type, button] of quizTypes) button.addEventListener('click', () => chooseQuizType(type));
 byId('replay-question').addEventListener('click', playQuestion);
 startQuiz.addEventListener('click', event => {
   quizStarted = true;
@@ -1208,7 +1325,7 @@ quizBank.addEventListener('click', event => {
   for (const remaining of quizBank.children) remaining.disabled = true;
   advanceTimer = setTimeout(() => {
     const currentFocus = document.activeElement;
-    const attentionInQuiz = moveFocus && !quizPanel.hidden && !byId('flashcards-panel').hidden &&
+    const attentionInQuiz = moveFocus && !quizPanel.hidden && !byId('quizzes-panel').hidden &&
       (currentFocus === button || currentFocus === document.body);
     button.classList.remove('choice-wrong');
     quizIndex++;
@@ -1222,6 +1339,7 @@ resetQuiz();
 fillCapitalChoices(studyBank);
 showStudyQuestion();
 
+byId('practice-map').append(matchingGame);
 reset();
 
 const logo = byId('logo-button');
@@ -1301,6 +1419,7 @@ reviewAudio.addEventListener('ended', stopReview);
 function showRequestedPage() {
   const showReview = location.hash === '#audio-review';
   if (showReview === !reviewPage.hidden) return;
+  celebration.replaceChildren();
   gamePage.hidden = showReview;
   reviewPage.hidden = !showReview;
   if (showReview) {
@@ -1313,6 +1432,13 @@ function showRequestedPage() {
     logo.focus({preventScroll:true});
   }
 }
+byId('preview-celebration').addEventListener('click', () => {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    reviewStatus.textContent = 'Celebration animation is off while Reduce Motion is enabled.';
+    return;
+  }
+  showCelebration();
+});
 window.addEventListener('hashchange', showRequestedPage);
 showRequestedPage();
 </script>
