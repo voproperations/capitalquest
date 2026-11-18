@@ -1233,6 +1233,11 @@ function answerMapQuiz(code) {
   if (!mapQuizStarted || !choice || attempted.has(choice)) return;
   const selected = choice;
   const correct = selected === code;
+  const shading = correct ? 'done' : 'miss';
+  const location = mapButtons.get(code);
+  const shortcut = shortcutButtons.get(code);
+  location.classList.add(shading);
+  shortcut?.classList.add(shading);
   const chip = capitalButtons.get(selected);
   chip.setAttribute('aria-pressed','false');
   choice = null;
@@ -1246,6 +1251,8 @@ function answerMapQuiz(code) {
   announce(correct ? 'Correct!' : 'Incorrect.', correct ? 'correct' : 'wrong');
   for (const button of bank.children) button.disabled = true;
   mapAdvanceTimer = setTimeout(() => {
+    location.classList.remove(shading);
+    shortcut?.classList.remove(shading);
     for (const button of bank.children) button.disabled = attempted.has(button.dataset.capital);
     if (attempted.size < states.length) {
       pickNextMapItem();
