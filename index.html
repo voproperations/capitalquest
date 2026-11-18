@@ -876,7 +876,6 @@ function showQuestion() {
     'Choose the capital of ' + quizDeck[quizIndex].name + '.', finished ? 'complete' : '');
   byId('replay-question').textContent = finished ? 'Replay result' : 'Replay question';
   playQuestion();
-  quizBank.scrollTop = 0;
   for (const button of quizBank.children) button.disabled = false;
 }
 
@@ -887,6 +886,7 @@ function resetQuiz() {
   quizCorrect = 0;
   clearTimeout(advanceTimer);
   fillCapitalChoices(quizBank);
+  quizBank.scrollTop = 0;
   showQuestion();
 }
 
@@ -911,12 +911,9 @@ quizBank.addEventListener('click', event => {
   quizAnswered = true;
   const state = quizDeck[quizIndex];
   const isCorrect = button.dataset.answer === state.code;
-  const correctAnswer = quizBank.querySelector('[data-answer="' + state.code + '"]');
   if (isCorrect) quizCorrect++;
   else button.classList.add('choice-wrong');
-  correctAnswer.classList.add('choice-correct');
-  const result = isCorrect ? 'Correct! ' : 'Incorrect. ';
-  setFlashcardFeedback(quizFeedback, result + state.capital + ' is the capital of ' + state.name + '.',
+  setFlashcardFeedback(quizFeedback, isCorrect ? 'Correct!' : 'Incorrect.',
     isCorrect ? 'correct' : 'wrong');
   updateQuizProgress();
   const moveFocus = document.activeElement === button;
@@ -925,11 +922,10 @@ quizBank.addEventListener('click', event => {
     const currentFocus = document.activeElement;
     const attentionInQuiz = moveFocus && !quizPanel.hidden && !byId('flashcards-panel').hidden &&
       (currentFocus === button || currentFocus === document.body);
-    correctAnswer.remove();
     button.classList.remove('choice-wrong');
     quizIndex++;
     showQuestion();
-    if (attentionInQuiz) (quizBank.firstElementChild ?? byId('restart-quiz')).focus({preventScroll:true});
+    if (attentionInQuiz) (quizBank.hidden ? byId('restart-quiz') : button).focus({preventScroll:true});
   }, quizFeedbackDuration);
 });
 resetQuiz();
