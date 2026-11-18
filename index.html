@@ -129,6 +129,16 @@ select{min-height:44px;padding:7px 26px 7px 8px;border:1px solid var(--control-b
 .matching-modes{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .quiz-celebration{position:fixed;inset:0;z-index:5;overflow:hidden;pointer-events:none}
 .quiz-celebration:empty{display:none}
+.celebration-banner{position:absolute;z-index:1;left:50%;top:35%;padding:12px clamp(18px,4vw,44px);border-block:3px solid #ffe08f;border-radius:9px;background:linear-gradient(115deg,#8834ab,#c43c82);box-shadow:0 6px 20px #1c0e32a0;color:#fff8dd;font-size:clamp(1.65rem,6vw,4.4rem);font-weight:900;line-height:1.12;text-shadow:0 2px 2px #512257;white-space:nowrap;animation:party-banner 8.4s both}
+.celebration-banner::before,.celebration-banner::after{content:"";position:absolute;top:24%;width:34px;height:82%;background:#732576}
+.celebration-banner::before{right:100%;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,26% 50%)}
+.celebration-banner::after{left:100%;clip-path:polygon(0 0,100% 0,74% 50%,100% 100%,0 100%)}
+@keyframes party-banner{
+  0%{transform:translate(-50%,-50%) scale(.72) rotate(-5deg);opacity:0}
+  7%{transform:translate(-50%,-50%) scale(1.06) rotate(2deg);opacity:1}
+  13%,88%{transform:translate(-50%,-50%) scale(1) rotate(0);opacity:1}
+  100%{transform:translate(-50%,-58%) scale(.97);opacity:0}
+}
 .confetti,.balloon{position:absolute;background:var(--party-color);animation-fill-mode:both}
 .confetti{left:50%;top:56%;width:8px;height:12px;border-radius:2px;animation:confetti-burst var(--duration) ease-out both;animation-delay:var(--delay)}
 .confetti.streamer{width:6px;height:48px;border-radius:8px;box-shadow:inset 2px 0 #ffffff55}
@@ -441,6 +451,7 @@ let mapQuiz = false;
 let practiceStates = false;
 let mapQuizStarted = false;
 let attempted = new Set();
+let mapShades = new Map();
 let mapAdvanceTimer;
 let mapResetTimer;
 const matchingGame = byId('matching-game');
@@ -622,6 +633,7 @@ function reset() {
   if (mapQuiz && !byId('quiz-map').hidden) byId('quiz-celebration').replaceChildren();
   mapQuizStarted = false;
   attempted = new Set();
+  mapShades = new Map();
   matched = new Set();
   streak = bestStreak = guesses = 0;
   drawMatchingRound();
@@ -636,6 +648,9 @@ function drawMatchingRound() {
   stateList.value = '';
   mapButtons.clear();
   buildMap();
+  if (mapQuiz) {
+    for (const [code, shading] of mapShades) shadeMapLocation(code, shading);
+  }
   capitalButtons.clear();
   bank.replaceChildren();
   for (const state of matchStates ? states : capitals) {
@@ -691,14 +706,14 @@ function chooseMatchingActivity(statesMode, isQuiz = false) {
   if (mapQuiz && attempted.size === states.length && quizResult(matched.size).percent >= 80) {
     matchingRounds.delete(previous);
   } else {
-    matchingRounds.set(previous, {matched, streak, bestStreak, guesses, attempted, mapQuizStarted});
+    matchingRounds.set(previous, {matched, streak, bestStreak, guesses, attempted, mapShades, mapQuizStarted});
   }
   matchStates = statesMode;
   mapQuiz = isQuiz;
   if (!mapQuiz) practiceStates = statesMode;
   const round = matchingRounds.get(roundKey(matchStates, mapQuiz)) ??
-    {matched:new Set(), streak:0, bestStreak:0, guesses:0, attempted:new Set(), mapQuizStarted:false};
-  ({matched, streak, bestStreak, guesses, attempted, mapQuizStarted} = round);
+    {matched:new Set(), streak:0, bestStreak:0, guesses:0, attempted:new Set(), mapShades:new Map(), mapQuizStarted:false};
+  ({matched, streak, bestStreak, guesses, attempted, mapShades, mapQuizStarted} = round);
   byId('matching-score-label').textContent = mapQuiz ? 'correct' : 'matched';
   byId('progress').setAttribute('aria-label', mapQuiz ? 'Questions answered' : 'States matched');
   byId('match-capitals').setAttribute('aria-pressed', String(!matchStates));
@@ -1183,10 +1198,17 @@ function celebrateQuiz() {
 function showCelebration() {
   const colors = ['#ffd064','#fc82ad','#a6e87d','#81ceff','#c9a3ff','#ff996e'];
   const decorations = document.createDocumentFragment();
-  for (let index = 0; index < 60; index++) {
+  const banner = document.createElement('strong');
+  banner.className = 'celebration-banner';
+  banner.textContent = 'Great Job!';
+  banner.addEventListener('animationend', () => banner.remove(), {once:true});
+  decorations.append(banner);
+  const confettiCount = 96;
+  const balloonCount = 24;
+  for (let index = 0; index < confettiCount + balloonCount; index++) {
     const piece = document.createElement('span');
     piece.style.setProperty('--party-color', colors[index % colors.length]);
-    if (index < 50) {
+    if (index < confettiCount) {
       const spread = (Math.random() - 0.5) * 108;
       const spin = (Math.random() - 0.5) * 1500;
       piece.className = index % 4 === 0 ? 'confetti streamer' : 'confetti';
@@ -1195,13 +1217,15 @@ function showCelebration() {
       piece.style.setProperty('--rise', -(12 + Math.random() * 40) + 'vh');
       piece.style.setProperty('--turn', spin / 2 + 'deg');
       piece.style.setProperty('--spin', spin + 'deg');
-      piece.style.setProperty('--delay', Math.floor(index / 17) * 2400 + 'ms');
+      piece.style.setProperty('--delay', Math.floor(index / 32) * 2400 + 'ms');
       piece.style.setProperty('--duration', 1700 + Math.random() * 850 + 'ms');
     } else {
       piece.className = 'balloon';
-      piece.style.setProperty('--left', (index - 50) * 10 + 3 + 'vw');
+      const balloonIndex = index - confettiCount;
+      const column = balloonIndex % 12;
+      piece.style.setProperty('--left', column * 8 + 3 + Math.random() * 2 + 'vw');
       piece.style.setProperty('--drift', (Math.random() - 0.5) * 10 + 'vw');
-      piece.style.setProperty('--delay', (index - 50) * 480 + 'ms');
+      piece.style.setProperty('--delay', Math.floor(balloonIndex / 12) * 2700 + column * 190 + 'ms');
       piece.style.setProperty('--duration', 2300 + Math.random() * 800 + 'ms');
     }
     piece.addEventListener('animationend', () => piece.remove(), {once:true});
@@ -1229,15 +1253,20 @@ function pickNextMapItem() {
   if (next) selectCapital(next.dataset.capital);
 }
 
+function shadeMapLocation(code, shading) {
+  mapShades.set(code, shading);
+  for (const target of [mapButtons.get(code), shortcutButtons.get(code)]) {
+    if (!target) continue;
+    target.classList.remove('done','miss');
+    target.classList.add(shading);
+  }
+}
+
 function answerMapQuiz(code) {
   if (!mapQuizStarted || !choice || attempted.has(choice)) return;
   const selected = choice;
   const correct = selected === code;
-  const shading = correct ? 'done' : 'miss';
-  const location = mapButtons.get(code);
-  const shortcut = shortcutButtons.get(code);
-  location.classList.add(shading);
-  shortcut?.classList.add(shading);
+  shadeMapLocation(code, correct ? 'done' : 'miss');
   const chip = capitalButtons.get(selected);
   chip.setAttribute('aria-pressed','false');
   choice = null;
@@ -1251,8 +1280,6 @@ function answerMapQuiz(code) {
   announce(correct ? 'Correct!' : 'Incorrect.', correct ? 'correct' : 'wrong');
   for (const button of bank.children) button.disabled = true;
   mapAdvanceTimer = setTimeout(() => {
-    location.classList.remove(shading);
-    shortcut?.classList.remove(shading);
     for (const button of bank.children) button.disabled = attempted.has(button.dataset.capital);
     if (attempted.size < states.length) {
       pickNextMapItem();
